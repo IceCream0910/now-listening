@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 
 const allowedOrigins = ['http://localhost', 'http://127.0.0.1', 'https://yuntae.in'];
 
-async function cors(request, response) {
+async function cors(request: NextRequest, response: NextResponse) {
     const origin = request.headers.get("origin") ?? "";
 
     if (allowedOrigins.includes(origin)) {
@@ -16,12 +16,12 @@ async function cors(request, response) {
     return response;
 }
 
-export async function OPTIONS(request) {
+export async function OPTIONS(request: NextRequest) {
     const response = new NextResponse(null, { status: 204 });
     return cors(request, response);
 }
 
-export async function GET(request) {
+export async function GET(request: NextRequest) {
     try {
         const options_token = {
             method: 'GET',
