@@ -1,15 +1,25 @@
-import MusicsData from '@/lib/musics';
 import { getThumbnailUrl } from '@/lib/youtube';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRef } from 'react';
 
+interface MusicStruct {
+  artist: string;
+  color: string;
+  duration: number;
+  id: string;
+  title: string;
+  albumart: string;
+}
+
 interface Props {
+  musicsData: MusicStruct[];
   currentMusicIndex: number;
   onMusicClick: (index: number) => void;
 }
 
-export default function Playlist({ currentMusicIndex, onMusicClick }: Props) {
+export default function Playlist({ musicsData, currentMusicIndex, onMusicClick }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const MusicsData = musicsData;
 
   const musics = [
     ...MusicsData.slice(currentMusicIndex + 1),
@@ -46,7 +56,7 @@ export default function Playlist({ currentMusicIndex, onMusicClick }: Props) {
           >
             <img
               alt={music.title}
-              src={getThumbnailUrl(music.id)}
+              src={music.albumart}
               className="size-56 shrink-0 rounded-8 object-cover"
             />
             <div className="flex flex-col gap-2">

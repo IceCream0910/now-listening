@@ -6,14 +6,14 @@ export default function MainPage() {
 }
 
 export const metadata: Metadata = {
-  description: '그냥내가좋아하는노래',
+  description: '최근에 들은 노래',
   openGraph: {
-    description: '그냥내가좋아하는노래',
-    title: 'Plyst',
+    description: '최근에 들은 노래',
+    title: '최근에 들은 노래',
   },
   title: 'Plyst',
   twitter: {
-    description: '그냥내가좋아하는노래',
-    title: 'Plyst',
+    description: '최근에 들은 노래',
+    title: '최근에 들은 노래',
   },
 };
