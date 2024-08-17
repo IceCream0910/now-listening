@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import youtubesearchapi from 'youtube-search-api';
 
-export async function GET(request: NextRequest) {
+export async function GET(request) {
     // URL에서 쿼리 파라미터 추출
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('query');

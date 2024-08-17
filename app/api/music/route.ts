@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         return cors(request, corsResponse);
     } catch (error) {
         console.error(error);
-        const errorResponse = NextResponse.json({ error: error.message }, { status: 500 });
+        const errorResponse = NextResponse.json({ error: (error as any).message }, { status: 500 });
         return cors(request, errorResponse);
     }
 }
