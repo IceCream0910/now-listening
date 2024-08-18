@@ -1,35 +1,46 @@
 import Icon from '@/components/Icon';
-import { MusicStruct } from '@/lib/musics';
 import { motion } from 'framer-motion';
 import { ReactNode } from 'react';
 
+interface MusicStruct {
+  artist: string;
+  color: string;
+  duration: number;
+  id: string;
+  title: string;
+  albumart: string;
+}
 interface Props {
   currentMusic: MusicStruct;
   isListMode: boolean;
+  isLyricsMode: boolean;
   isPlaying: boolean;
   onListClick: () => void;
+  onLyricsClick: () => void;
   children: ReactNode;
 }
 
 export default function AlbumContent({
   currentMusic,
   isListMode,
+  isLyricsMode,
   isPlaying,
   onListClick,
+  onLyricsClick,
   children,
 }: Props) {
   return (
     <motion.div
       className={
-        isListMode
+        (isListMode || isLyricsMode)
           ? 'flex size-72 w-full items-center justify-start gap-16 self-start md:mx-auto md:w-[400px]'
           : 'flex min-h-0 w-full grow basis-0 items-start justify-center'
       }
     >
-      <motion.div className={isListMode ? 'aspect-square h-full' : 'size-full md:max-w-[400px]'}>
+      <motion.div className={(isListMode || isLyricsMode) ? 'aspect-square h-full' : 'size-full md:max-w-[400px]'}>
         <motion.div
-          animate={isPlaying || isListMode ? 'active' : 'shrink'}
-          data-list={isListMode}
+          animate={isPlaying || (isListMode || isLyricsMode) ? 'active' : 'shrink'}
+          data-list={(isListMode || isLyricsMode)}
           variants={{
             active: { scale: 1, transition: { damping: 20, stiffness: 260, type: 'spring' } },
             shrink: { scale: 0.8, transition: { damping: 20, stiffness: 260, type: 'spring' } },
@@ -40,7 +51,7 @@ export default function AlbumContent({
           {children}
         </motion.div>
       </motion.div>
-      {isListMode && (
+      {(isListMode || isLyricsMode) && (
         <div className="flex grow items-center">
           <div className="flex grow flex-col">
             <motion.div layoutId="title" layout className="grow text-20 font-600 text-white">
@@ -51,14 +62,38 @@ export default function AlbumContent({
             </motion.div>
           </div>
           <motion.div
+            layoutId="lyrics"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onLyricsClick}
+            layout
+            className={`flex cursor-pointer items-center justify-center rounded-full p-8 mr-10 ml-10`}
+            style={{
+              backgroundColor: isLyricsMode ? currentMusic.color : '#ffffff30',
+              border: isLyricsMode ? `1px solid #ffffff20` : 'none'
+            }}
+          >
+            <Icon
+              type="lyrics"
+              className="size-16"
+            />
+          </motion.div>
+          <motion.div
             layoutId="list"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onListClick}
             layout
-            className="flex cursor-pointer items-center justify-center rounded-full bg-white/70 p-8"
+            className={`flex cursor-pointer items-center justify-center rounded-full p-8`}
+            style={{
+              backgroundColor: isListMode ? currentMusic.color : '#ffffff30',
+              border: isListMode ? `1px solid #ffffff20` : 'none'
+            }}
           >
-            <Icon style={{ color: currentMusic.color }} type="list" className="size-16" />
+            <Icon
+              type="list"
+              className="size-16"
+            />
           </motion.div>
         </div>
       )}

@@ -6,7 +6,8 @@ import AlbumContent from '@/components/AlbumContent';
 import Icon from '@/components/Icon';
 import MusicController from '@/components/MusicController';
 import Playlist from '@/components/Playlist';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import Lyrics from './Lyrics';
 
 interface MusicStruct {
   artist: string;
@@ -31,6 +32,7 @@ const adjustBrightness = (color: number[], amount: number) => color.map(c => Mat
 export default function MusicPlayer() {
   const [currentMusicIndex, setCurrentMusicIndex] = useState<number>(initialMusicIndex);
   const [isListMode, setIsListMode] = useState<boolean>(false);
+  const [isLyricsMode, setIsLyricsMode] = useState<boolean>(false);
   const [player, setPlayer] = useState<YouTubePlayer | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
@@ -50,7 +52,7 @@ export default function MusicPlayer() {
   useEffect(() => {
     async function getMusicsData() {
       try {
-        const response = await fetch('/api/music');
+        const response = await fetch('/api/music', { cache: 'no-store' });
         const result = await response.json();
         const transformedData: MusicStruct[] = result.data.map((item: any) => ({
           artist: item.attributes.artistName,
@@ -74,8 +76,8 @@ export default function MusicPlayer() {
       if (currentMusic) {
         try {
           const palette = await prominent(currentMusic.albumart, { amount: 2, format: 'rgb' });
-          const mainColor = adjustBrightness(palette[0] as number[], -30);
-          const secondaryColor = adjustBrightness(palette[1] as number[], -30);
+          const mainColor = adjustBrightness(palette[0] as number[], -50);
+          const secondaryColor = adjustBrightness(palette[1] as number[], -50);
 
           setColorScheme({
             background: `linear-gradient(to bottom, ${rgbToString(mainColor)}, ${rgbToString(adjustBrightness(mainColor, -50))})`,
@@ -182,15 +184,31 @@ export default function MusicPlayer() {
 
   function handleListClick() {
     setIsListMode(prev => !prev);
+    setIsLyricsMode(false);
+  }
+
+  function handleLyricsClick() {
+    setIsLyricsMode(prev => !prev);
+    setIsListMode(false);
   }
 
   function handleMusicClick(index: number) {
     setCurrentMusicIndex(index);
   }
 
+  function handleLyricClick(index: number) {
+
+  }
+
   return (
-    <>
-      {MusicsData.length != 0 && (
+    <AnimatePresence>
+      {MusicsData.length == 0 ? (
+        <div className='flex justify-center items-center h-dvh w-dvw'>
+          <motion.div layoutId="title" layout className="grow text-28 font-700 text-center text-white">
+            최근에 들은 노래
+          </motion.div>
+        </div>
+      ) : (
         <div
           style={{
             background: colorScheme.background
@@ -201,8 +219,10 @@ export default function MusicPlayer() {
             <AlbumContent
               currentMusic={currentMusic}
               isListMode={isListMode}
+              isLyricsMode={isLyricsMode}
               isPlaying={isPlaying}
               onListClick={handleListClick}
+              onLyricsClick={handleLyricsClick}
             >
               <img
                 alt={currentMusic.title}
@@ -223,8 +243,19 @@ export default function MusicPlayer() {
                 <Playlist musicsData={MusicsData} currentMusicIndex={currentMusicIndex} onMusicClick={handleMusicClick} />
               </div>
             )}
+            {isLyricsMode && (
+              <div className="min-h-0 w-full grow basis-0 self-stretch overflow-y-hidden">
+                <Lyrics
+                  musicsData={MusicsData}
+                  currentMusicIndex={currentMusicIndex}
+                  onLyricClick={handleLyricClick}
+                  currentTime={currentTime}
+                />
+
+              </div>
+            )}
             <div className="flex flex-col gap-24 self-stretch md:w-[400px] md:self-center">
-              {!isListMode && (
+              {!isListMode && !isLyricsMode && (
                 <div className="flex items-center justify-between">
                   <div className="flex grow flex-col">
                     <motion.div layoutId="title" layout className="grow text-28 font-700 text-white">
@@ -238,6 +269,17 @@ export default function MusicPlayer() {
                       {currentMusic.artist}
                     </motion.div>
                   </div>
+                  <motion.div
+                    layoutId="lyrics"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleLyricsClick}
+                    layout
+                    className="flex cursor-pointer items-center justify-center rounded-full bg-white/10 p-8 mr-10 ml-10"
+                  >
+                    <Icon type="lyrics" className="size-16 text-white" />
+                  </motion.div>
+
                   <motion.div
                     layoutId="list"
                     whileHover={{ scale: 1.1 }}
@@ -264,6 +306,6 @@ export default function MusicPlayer() {
           <title>{`${currentMusic.title} (${currentMusic.artist}) - 최근에 들은 노래`}</title>
         </div>
       )}
-    </>
+    </AnimatePresence>
   );
 }
