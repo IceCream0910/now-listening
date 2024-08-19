@@ -109,7 +109,7 @@ export default function MusicPlayer() {
     if (!player) return;
 
     const fetchVideoId = async () => {
-      const response = await fetch(`/api/search?query=${currentMusic.title} ${currentMusic.artist} audio official`);
+      const response = await fetch(`/api/search?query=${currentMusic.title} ${currentMusic.artist} auto-generated`);
       const result = await response.json();
       setCurrentVideoId(result.data.id);
       console.log(result.data.id);
