@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import YouTube, { YouTubeEvent, YouTubePlayer } from 'react-youtube';
-import { prominent } from 'color.js';
+import { prominent, average } from 'color.js';
 import AlbumContent from '@/components/AlbumContent';
 import Icon from '@/components/Icon';
 import MusicController from '@/components/MusicController';
@@ -75,12 +75,12 @@ export default function MusicPlayer() {
     async function extractColors() {
       if (currentMusic) {
         try {
-          const palette = await prominent(currentMusic.albumart, { amount: 2, format: 'rgb' });
-          const mainColor = adjustBrightness(palette[0] as number[], -50);
-          const secondaryColor = adjustBrightness(palette[1] as number[], -50);
+          const palette = await average(currentMusic.albumart, { format: 'rgb' });
+          const mainColor = adjustBrightness(palette as number[], -20);
+          const secondaryColor = adjustBrightness(palette as number[], -50);
 
           setColorScheme({
-            background: `linear-gradient(to bottom, ${rgbToString(mainColor)}, ${rgbToString(adjustBrightness(mainColor, -50))})`,
+            background: `linear-gradient(to bottom, ${rgbToString(mainColor)}, ${rgbToString(adjustBrightness(mainColor, -80))})`,
             secondary: rgbToString(secondaryColor)
           });
         } catch (error) {
@@ -109,7 +109,7 @@ export default function MusicPlayer() {
     if (!player) return;
 
     const fetchVideoId = async () => {
-      const response = await fetch(`/api/search?query=${currentMusic.title} ${currentMusic.artist} topic audio`);
+      const response = await fetch(`/api/search?query=${currentMusic.title} ${currentMusic.artist} audio official`);
       const result = await response.json();
       setCurrentVideoId(result.data.id);
       console.log(result.data.id);

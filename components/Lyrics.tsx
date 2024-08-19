@@ -92,6 +92,7 @@ const parseTimeToSeconds = (time: string): number => {
 export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, currentTime }: Props) {
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [activeLyricIndex, setActiveLyricIndex] = useState<number>(0);
+  const [isEmptyTerm, setIsEmptyTerm] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchLyrics = async () => {
@@ -116,6 +117,11 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
         (index === lyrics.length - 1 || currentTime < lyrics[index + 1].start)
     );
     setActiveLyricIndex(newActiveIndex);
+    if (newActiveIndex === -1) {
+      setIsEmptyTerm(true);
+    } else {
+      setIsEmptyTerm(false);
+    }
   }, [currentTime, lyrics]);
 
   const getActiveSyllables = (line: LyricLine) => {
@@ -124,24 +130,23 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
     );
   };
 
-  const firstLyricStart = lyrics.length > 0 ? lyrics[0].start : 0;
-
   return (
     <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
       <AnimatePresence>
-        {currentTime < firstLyricStart && (
-          <motion.div
-            key="interlude"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="text-center font-black"
-            style={{ fontSize: '2rem', fontWeight: 900 }}
-          >
-            간주 중
-          </motion.div>
+        {isEmptyTerm && (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="100">
+            <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="15" cy="25">
+              <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.4"></animate>
+            </circle>
+            <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="26" cy="25">
+              <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.2"></animate>
+            </circle>
+            <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="37" cy="25">
+              <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
+            </circle>
+          </svg>
         )}
-        {lyrics[activeLyricIndex] && currentTime >= firstLyricStart && (
+        {lyrics[activeLyricIndex] && !isEmptyTerm && (
           <motion.div
             key={activeLyricIndex}
             initial={{ opacity: 0, y: 20 }}
