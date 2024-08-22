@@ -192,12 +192,18 @@ export default function MusicPlayer() {
     setIsListMode(false);
   }
 
+  function handleBackToMainClick() {
+    setIsListMode(false);
+    setIsLyricsMode(false);
+  }
+
   function handleMusicClick(index: number) {
     setCurrentMusicIndex(index);
   }
 
-  function handleLyricClick(index: number) {
-
+  function handleLyricClick(time: number) {
+    if (!player) return;
+    handleSeek(time);
   }
 
   return (
@@ -223,6 +229,7 @@ export default function MusicPlayer() {
               isPlaying={isPlaying}
               onListClick={handleListClick}
               onLyricsClick={handleLyricsClick}
+              onAlbumartClick={handleBackToMainClick}
             >
               <img
                 alt={currentMusic.title}

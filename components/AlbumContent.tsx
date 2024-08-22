@@ -17,6 +17,7 @@ interface Props {
   isPlaying: boolean;
   onListClick: () => void;
   onLyricsClick: () => void;
+  onAlbumartClick: () => void;
   children: ReactNode;
 }
 
@@ -27,6 +28,7 @@ export default function AlbumContent({
   isPlaying,
   onListClick,
   onLyricsClick,
+  onAlbumartClick,
   children,
 }: Props) {
   return (
@@ -39,6 +41,7 @@ export default function AlbumContent({
     >
       <motion.div className={(isListMode || isLyricsMode) ? 'aspect-square h-full' : 'size-full md:max-w-[400px]'}>
         <motion.div
+          onClick={onAlbumartClick}
           animate={isPlaying || (isListMode || isLyricsMode) ? 'active' : 'shrink'}
           data-list={(isListMode || isLyricsMode)}
           variants={{

@@ -124,27 +124,30 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
     }
   }, [currentTime, lyrics]);
 
-  const getActiveSyllables = (line: LyricLine) => {
-    return line.syllables.filter(
-      syllable => currentTime >= syllable.start && currentTime < syllable.end
-    );
+  const skipIntro = () => {
+    const firstLyric = lyrics[0];
+    const startTime = firstLyric.start;
+    onLyricClick(startTime);
   };
 
   return (
     <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
       <AnimatePresence>
         {isEmptyTerm && (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="100">
-            <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="15" cy="25">
-              <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.4"></animate>
-            </circle>
-            <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="26" cy="25">
-              <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.2"></animate>
-            </circle>
-            <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="37" cy="25">
-              <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
-            </circle>
-          </svg>
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="100">
+              <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="15" cy="25">
+                <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.4"></animate>
+              </circle>
+              <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="26" cy="25">
+                <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.2"></animate>
+              </circle>
+              <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="37" cy="25">
+                <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
+              </circle>
+            </svg>
+            <button onClick={skipIntro} className='flex cursor-pointer items-center justify-center bg-white/10 px-14 py-6 active:scale-95 transition-all' style={{ position: 'absolute', bottom: '200px', fontSize: '13px', borderRadius: '10px' }}>건너뛰기</button>
+          </>
         )}
         {lyrics[activeLyricIndex] && !isEmptyTerm && (
           <motion.div
@@ -153,7 +156,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
             className="text-center font-black"
-            style={{ fontSize: '2rem', fontWeight: 900 }}
+            style={{ fontSize: '2rem', fontWeight: 900, wordBreak: 'keep-all' }}
           >
             {lyrics[activeLyricIndex].syllables.map((syllable, index) => (
               <motion.span
@@ -166,7 +169,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
                 transition={{ duration: 0.2 }}
                 className="inline-block"
               >
-                {syllable.text}
+                {index === lyrics[activeLyricIndex].syllables.length - 1 ? syllable.text.trim() : syllable.text}
               </motion.span>
             ))}
           </motion.div>
