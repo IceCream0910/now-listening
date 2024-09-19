@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 
 const allowedOrigins = ['http://localhost', 'http://127.0.0.1', 'https://yuntae.in'];
 
-async function cors(request: NextRequest, response: NextResponse) {
+async function cors(request, response) {
     const origin = request.headers.get("origin") ?? "";
 
     if (allowedOrigins.includes(origin)) {
@@ -16,12 +16,12 @@ async function cors(request: NextRequest, response: NextResponse) {
     return response;
 }
 
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(request) {
     const response = new NextResponse(null, { status: 204 });
     return cors(request, response);
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(request) {
     try {
         const options_token = {
             method: 'GET',
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         const token = token_data.token;
 
         // 6개월 주기로 갱신 필요
-        const mediaUserToken = "AoMGIGmXc2BcMbdz8SYGkNZdharyHtHmeYyaZUpUTLTEF+IEmo+f1yFkG0oA5o1KRi6J7GTArluapwsEhfsyjBBOIVZyfIDycq1zQnobKtQhsAsCiS2ByKpH7FwG0KLTBUF23/IMLgYKf5+9WlA3q/6TXRrid2sNA5qMFvjB/kwuZyRv6iz7+JrJTKbzeh06FVFCGK1mQns6tdTTEncfn5tqbgq+uNSN7vw7iN/hBEkXoE7dAg==";
+        const mediaUserToken = process.env.NEXT_PUBLIC_APPLE_MUSIC_MEDIA_USER_TOKEN;
 
         const options = {
             method: 'GET',
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         return cors(request, corsResponse);
     } catch (error) {
         console.error(error);
-        const errorResponse = NextResponse.json({ error: (error as any).message }, { status: 500 });
+        const errorResponse = NextResponse.json({ error: (error).message }, { status: 500 });
         return cors(request, errorResponse);
     }
 }

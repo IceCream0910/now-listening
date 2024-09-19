@@ -24,7 +24,7 @@ export async function GET(req, { params }) {
         const token = token_data.token;
 
         // 6개월 주기로 갱신 필요
-        const mediaUserToken = "AoMGIGmXc2BcMbdz8SYGkNZdharyHtHmeYyaZUpUTLTEF+IEmo+f1yFkG0oA5o1KRi6J7GTArluapwsEhfsyjBBOIVZyfIDycq1zQnobKtQhsAsCiS2ByKpH7FwG0KLTBUF23/IMLgYKf5+9WlA3q/6TXRrid2sNA5qMFvjB/kwuZyRv6iz7+JrJTKbzeh06FVFCGK1mQns6tdTTEncfn5tqbgq+uNSN7vw7iN/hBEkXoE7dAg==";
+        const mediaUserToken = process.env.NEXT_PUBLIC_APPLE_MUSIC_MEDIA_USER_TOKEN;
 
         const options = {
             method: 'GET',
