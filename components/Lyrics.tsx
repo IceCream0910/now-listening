@@ -91,6 +91,7 @@ const parseTimeToSeconds = (time: string): number => {
 
 export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, currentTime }: Props) {
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
+  const [lyricsType, setLyricsType] = useState<string>('syllable');
   const [activeLyricIndex, setActiveLyricIndex] = useState<number>(0);
   const [isEmptyTerm, setIsEmptyTerm] = useState<boolean>(false);
 
@@ -99,9 +100,17 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
       try {
         const response = await fetch(`/api/lyrics/${musicsData[currentMusicIndex].id}`);
         const data: any = await response.json();
+        if (data.errors) {
+          setLyricsType('none');
+          return;
+        }
         const parsedLyrics = parseTTML(data.data[0].attributes.ttml);
+        if (parsedLyrics[parsedLyrics.length - 1].end <= 0) { // syllable 가사 미지원 곡
+          setLyricsType('full');
+        } else {
+          setLyricsType('syllable');
+        }
         setLyrics(parsedLyrics);
-        console.log('Lyrics:', parsedLyrics);
       } catch (error) {
         console.error('Error fetching lyrics:', error);
       }
@@ -130,51 +139,89 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
     onLyricClick(startTime);
   };
 
-  return (
-    <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
-      <AnimatePresence>
-        {isEmptyTerm && (
-          <>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="100">
-              <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="15" cy="25">
-                <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.4"></animate>
-              </circle>
-              <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="26" cy="25">
-                <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.2"></animate>
-              </circle>
-              <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="37" cy="25">
-                <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
-              </circle>
-            </svg>
-            <button onClick={skipIntro} className='flex cursor-pointer items-center justify-center bg-white/10 px-14 py-6 active:scale-95 transition-all' style={{ position: 'absolute', bottom: '200px', fontSize: '13px', borderRadius: '10px' }}>건너뛰기</button>
-          </>
-        )}
-        {lyrics[activeLyricIndex] && !isEmptyTerm && (
-          <motion.div
-            key={activeLyricIndex}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="text-center font-black"
-            style={{ fontSize: '2rem', fontWeight: 900, wordBreak: 'keep-all' }}
-          >
-            {lyrics[activeLyricIndex].syllables.map((syllable, index) => (
-              <motion.span
-                key={index}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{
-                  opacity: currentTime >= syllable.start ? 0.9 : 0,
-                  y: currentTime >= syllable.start ? 0 : 5,
-                }}
-                transition={{ duration: 0.2 }}
-                className="inline-block"
-              >
-                {index === lyrics[activeLyricIndex].syllables.length - 1 ? syllable.text.trim() : syllable.text}
-              </motion.span>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+  if (lyricsType === 'full') {
+    return (
+      <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
+        <motion.div
+          key={activeLyricIndex}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="text-center font-black w-full h-full overflow-y-auto"
+          style={{ fontSize: '1rem', fontWeight: 600, wordBreak: 'keep-all' }}
+        >
+          {lyrics.map((lyric, index) => (
+            <motion.span
+              key={index}
+            >
+              {lyric.text}<br />
+            </motion.span>
+          ))}
+        </motion.div>
+      </div>
+    )
+  } else if (lyricsType === 'syllable') {
+    return (
+      <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
+        <AnimatePresence>
+          {isEmptyTerm && (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="100">
+                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="15" cy="25">
+                  <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.4"></animate>
+                </circle>
+                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="26" cy="25">
+                  <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.2"></animate>
+                </circle>
+                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="37" cy="25">
+                  <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
+                </circle>
+              </svg>
+              <button onClick={skipIntro} className='flex cursor-pointer items-center justify-center bg-white/10 px-14 py-6 active:scale-95 transition-all' style={{ position: 'absolute', bottom: '200px', fontSize: '13px', borderRadius: '10px' }}>건너뛰기</button>
+            </>
+          )}
+          {lyrics[activeLyricIndex] && !isEmptyTerm && (
+            <motion.div
+              key={activeLyricIndex}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="text-center font-black"
+              style={{ fontSize: '2rem', fontWeight: 900, wordBreak: 'keep-all' }}
+            >
+              {lyrics[activeLyricIndex].syllables.map((syllable, index) => (
+                <motion.span
+                  key={index}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{
+                    opacity: currentTime >= syllable.start ? 0.9 : 0,
+                    y: currentTime >= syllable.start ? 0 : 5,
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className="inline-block"
+                >
+                  {index === lyrics[activeLyricIndex].syllables.length - 1 ? syllable.text.trim() : syllable.text}
+                </motion.span>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  } else {
+    return (
+      <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
+        <motion.div
+          key={activeLyricIndex}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 0.5, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="text-center font-black"
+          style={{ fontSize: '2rem', fontWeight: 900, wordBreak: 'keep-all' }}
+        >
+          가사 정보 없음
+        </motion.div>
+      </div>
+    )
+  }
 }

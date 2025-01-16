@@ -52,7 +52,7 @@ export default function MusicPlayer() {
   useEffect(() => {
     async function getMusicsData() {
       try {
-        const response = await fetch('/api/music', { cache: 'no-store' });
+        const response = await fetch('/api/recent', { cache: 'no-store' });
         const result = await response.json();
         const transformedData: MusicStruct[] = result.data.map((item: any) => ({
           artist: item.attributes.artistName,
