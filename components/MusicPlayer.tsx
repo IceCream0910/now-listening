@@ -8,6 +8,7 @@ import MusicController from '@/components/MusicController';
 import Playlist from '@/components/Playlist';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lyrics from './Lyrics';
+import { useRouter } from 'next/navigation';
 
 interface MusicStruct {
   artist: string;
@@ -29,7 +30,7 @@ const initialMusicIndex = 0;
 const rgbToString = (rgb: number[]) => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 const adjustBrightness = (color: number[], amount: number) => color.map(c => Math.max(0, Math.min(255, c + amount)));
 
-export default function MusicPlayer() {
+export default function MusicPlayer({ songId }: { songId?: string }) {
   const [currentMusicIndex, setCurrentMusicIndex] = useState<number>(initialMusicIndex);
   const [isListMode, setIsListMode] = useState<boolean>(false);
   const [isLyricsMode, setIsLyricsMode] = useState<boolean>(false);
@@ -39,20 +40,22 @@ export default function MusicPlayer() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [MusicsData, setMusicsData] = useState<MusicStruct[]>([]);
   const [currentVideoId, setCurrentVideoId] = useState<string>('');
+  const [error, setError] = useState<boolean>(false);
   const [colorScheme, setColorScheme] = useState<ColorScheme>({
-    background: 'linear-gradient(to bottom, #000000, #000000)',
+    background: 'linear-gradient(rgb(95, 132, 169), rgb(15, 52, 89))',
     secondary: '#FFFFFF50'
   });
 
+  const router = useRouter();
   const intervalRef = useRef<any>(null);
   const isSeekedRef = useRef<boolean>(false);
 
   const currentMusic = MusicsData[currentMusicIndex];
 
   useEffect(() => {
-    async function getMusicsData() {
+    async function getRecent() {
       try {
-        const response = await fetch('/api/recent', { cache: 'no-store' });
+        const response = await fetch(`/api/proxy?url=https://yuntae.in/api/music/recent`, { cache: 'no-store' });
         const result = await response.json();
         const transformedData: MusicStruct[] = result.data.map((item: any) => ({
           artist: item.attributes.artistName,
@@ -65,10 +68,34 @@ export default function MusicPlayer() {
         setMusicsData(transformedData);
       } catch (error) {
         console.error('Error fetching music data:', error);
+        setError(true);
       }
     }
 
-    getMusicsData();
+    async function getSpecific(id: string) {
+      try {
+        const response = await fetch(`/api/proxy?url=https://yuntae.in/api/music/song/${songId}`, { cache: 'no-store' });
+        const result = await response.json();
+        const transformedData: MusicStruct[] = result.data.map((item: any) => ({
+          artist: item.attributes.artistName,
+          color: '#' + item.attributes.artwork.bgColor,
+          duration: Math.floor(item.attributes.durationInMillis / 1000),
+          id: item.id,
+          title: item.attributes.name,
+          albumart: item.attributes.artwork.url.replace('{w}', '400').replace('{h}', '400'),
+        }));
+        setMusicsData(transformedData);
+      } catch (error) {
+        console.error('Error fetching music data:', error);
+        setError(true);
+      }
+    }
+
+    if (songId) { // 특정 곡
+      getSpecific(songId);
+    } else { // 최근 재생 곡
+      getRecent();
+    }
   }, []);
 
   useEffect(() => {
@@ -77,7 +104,7 @@ export default function MusicPlayer() {
         try {
           const palette = await average(currentMusic.albumart, { format: 'rgb' });
           const mainColor = adjustBrightness(palette as number[], -20);
-          const secondaryColor = adjustBrightness(palette as number[], -50);
+          const secondaryColor = adjustBrightness(palette as number[], -80);
 
           setColorScheme({
             background: `linear-gradient(to bottom, ${rgbToString(mainColor)}, ${rgbToString(adjustBrightness(mainColor, -80))})`,
@@ -206,113 +233,166 @@ export default function MusicPlayer() {
     handleSeek(time);
   }
 
+
+
+  if (error) {
+    return (
+      <div className='flex justify-center items-center h-dvh w-dvw'>
+        <motion.div layoutId="title" layout className="grow font-700 text-28 text-center text-white">
+          <h3>오류</h3>
+          <span className="text-16">데이터를 불러오지 못했어요 :(</span>
+        </motion.div>
+      </div>
+    )
+  }
+
+  if (MusicsData.length == 0) {
+    return (<div className='flex justify-center items-center h-dvh w-dvw'>
+      {songId ? (
+        <svg className="mr-3 animate-spin text-white" viewBox="0 0 24 24" style={{ width: '34px', height: '34px' }}>
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+            fill="none"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+      ) : (
+        <motion.div
+          className="text-28 font-700 text-white animate-pulse"
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          최근에 들은 노래
+        </motion.div>
+      )}
+    </div>);
+  }
+
   return (
     <AnimatePresence>
-      {MusicsData.length == 0 ? (
-        <div className='flex justify-center items-center h-dvh w-dvw'>
-          <motion.div layoutId="title" layout className="grow text-28 font-700 text-center text-white">
-            최근에 들은 노래
-          </motion.div>
-        </div>
-      ) : (
-        <div
-          style={{
-            background: colorScheme.background
-          }}
-          className="flex h-dvh w-dvw flex-col items-center justify-center gap-32 overflow-hidden px-32 transition-all duration-300"
-        >
-          <div className="my-48 flex grow flex-col items-center justify-between gap-32 self-stretch md:max-h-[720px]">
-            <AlbumContent
-              currentMusic={currentMusic}
-              isListMode={isListMode}
-              isLyricsMode={isLyricsMode}
-              isPlaying={isPlaying}
-              onListClick={handleListClick}
-              onLyricsClick={handleLyricsClick}
-              onAlbumartClick={handleBackToMainClick}
-            >
-              <img
-                alt={currentMusic.title}
-                src={currentMusic.albumart}
-                className="size-full min-h-0"
+      <motion.div
+        initial={{ background: 'linear-gradient(rgb(95, 132, 169), rgb(15, 52, 89))' }}
+        animate={{ background: colorScheme.background }}
+        transition={{ duration: 0.3 }}
+        className="flex h-dvh w-dvw flex-col items-center justify-center gap-32 overflow-hidden px-32 transition-all duration-300"
+      >
+        <div className="my-48 flex grow flex-col items-center justify-between gap-32 self-stretch md:max-h-[720px]">
+          <AlbumContent
+            currentMusic={currentMusic}
+            colorScheme={colorScheme}
+            isListMode={isListMode}
+            isLyricsMode={isLyricsMode}
+            isPlaying={isPlaying}
+            mode={songId ? 'specific' : 'playlist'}
+            onListClick={handleListClick}
+            onLyricsClick={handleLyricsClick}
+            onAlbumartClick={handleBackToMainClick}
+          >
+            <img
+              alt={currentMusic.title}
+              src={currentMusic.albumart}
+              className="size-full min-h-0"
+            />
+            <YouTube
+              iframeClassName="size-full min-h-0"
+              opts={{ playerVars: { autoplay: 1, controls: 0, modestbranding: 1, playsinline: 1 } }}
+              videoId={currentVideoId}
+              onEnd={handleEnd}
+              onReady={handleReady}
+              className="size-full min-h-0"
+            />
+          </AlbumContent>
+          {isListMode && (
+            <div className="min-h-0 w-full grow basis-0 self-stretch overflow-y-hidden">
+              <Playlist musicsData={MusicsData} currentMusicIndex={currentMusicIndex} onMusicClick={handleMusicClick} />
+            </div>
+          )}
+          {isLyricsMode && (
+            <div className="min-h-0 w-full grow basis-0 self-stretch overflow-y-hidden">
+              <Lyrics
+                musicsData={MusicsData}
+                currentMusicIndex={currentMusicIndex}
+                onLyricClick={handleLyricClick}
+                currentTime={currentTime}
               />
-              <YouTube
-                iframeClassName="size-full min-h-0"
-                opts={{ playerVars: { autoplay: 1, controls: 0, modestbranding: 1, playsinline: 1 } }}
-                videoId={currentVideoId}
-                onEnd={handleEnd}
-                onReady={handleReady}
-                className="size-full min-h-0"
-              />
-            </AlbumContent>
-            {isListMode && (
-              <div className="min-h-0 w-full grow basis-0 self-stretch overflow-y-hidden">
-                <Playlist musicsData={MusicsData} currentMusicIndex={currentMusicIndex} onMusicClick={handleMusicClick} />
-              </div>
-            )}
-            {isLyricsMode && (
-              <div className="min-h-0 w-full grow basis-0 self-stretch overflow-y-hidden">
-                <Lyrics
-                  musicsData={MusicsData}
-                  currentMusicIndex={currentMusicIndex}
-                  onLyricClick={handleLyricClick}
-                  currentTime={currentTime}
-                />
 
-              </div>
-            )}
-            <div className="flex flex-col gap-24 self-stretch md:w-[400px] md:self-center">
-              {!isListMode && !isLyricsMode && (
-                <div className="flex items-center justify-between">
-                  <div className="flex grow flex-col">
-                    <motion.div layoutId="title" layout className="grow text-28 font-700 text-white">
-                      {currentMusic.title}
-                    </motion.div>
-                    <motion.div
-                      layoutId="artist"
-                      layout
-                      className="grow text-20 font-500 text-white/30"
-                    >
-                      {currentMusic.artist}
-                    </motion.div>
-                  </div>
+            </div>
+          )}
+          <div className="flex flex-col gap-24 self-stretch md:w-[400px] md:self-center">
+            {!isListMode && !isLyricsMode && (
+              <div className="flex items-center justify-between">
+                <div className="flex grow flex-col">
+                  <motion.div layoutId="title" layout className="grow text-28 font-700 text-white">
+                    {currentMusic.title}
+                  </motion.div>
+                  <motion.div
+                    layoutId="artist"
+                    layout
+                    className="grow text-20 font-500 text-white/30"
+                  >
+                    {currentMusic.artist}
+                  </motion.div>
+                </div>
+
+                <div className="group relative mr-8">
                   <motion.div
                     layoutId="lyrics"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={handleLyricsClick}
                     layout
-                    className="flex cursor-pointer items-center justify-center rounded-full bg-white/10 p-8 mr-10 ml-10"
+                    className="flex cursor-pointer items-center justify-center rounded-full bg-white/10 p-8"
                   >
                     <Icon type="lyrics" className="size-16 text-white" />
                   </motion.div>
+                  <div className="absolute -top-32 left-1/2 -translate-x-1/2 transform opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap bg-white/10 text-white text-xs px-8 py-1 rounded-full"
+                    style={{ fontSize: '14px' }}>가사
+                  </div>
+                </div>
 
+                <div className="group relative">
                   <motion.div
                     layoutId="list"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={handleListClick}
+                    onClick={() => songId ? router.push('/') : handleListClick()}
                     layout
                     className="flex cursor-pointer items-center justify-center rounded-full bg-white/10 p-8"
                   >
                     <Icon type="list" className="size-16 text-white" />
                   </motion.div>
+                  <div className="absolute -top-32 left-1/2 -translate-x-1/2 transform opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap bg-white/10 text-white text-xs px-6 py-1 rounded-full"
+                    style={{ fontSize: '14px' }}>
+                    {songId ? '최근' : '재생목록'}
+                  </div>
                 </div>
-              )}
-              <MusicController
-                currentTime={currentTime}
-                duration={duration}
-                isPlaying={isPlaying}
-                onControl={handleControl}
-                onNext={handleNext}
-                onPrev={handlePrev}
-                onSeek={handleSeek}
-              />
-            </div>
+
+              </div>
+            )}
+            <MusicController
+              currentTime={currentTime}
+              duration={duration}
+              isPlaying={isPlaying}
+              mode={songId ? 'specific' : 'playlist'}
+              onControl={handleControl}
+              onNext={handleNext}
+              onPrev={handlePrev}
+              onSeek={handleSeek}
+            />
           </div>
-          <title>{`${currentMusic.title} (${currentMusic.artist}) - 최근에 들은 노래`}</title>
         </div>
-      )}
+        <title>{`${currentMusic.title} (${currentMusic.artist}) ${!songId ? '- 최근에 들은 노래' : ''}`}</title>
+      </motion.div>
     </AnimatePresence>
   );
 }

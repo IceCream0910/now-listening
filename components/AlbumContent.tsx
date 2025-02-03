@@ -10,11 +10,19 @@ interface MusicStruct {
   title: string;
   albumart: string;
 }
+
+interface ColorScheme {
+  background: string;
+  secondary: string;
+}
+
 interface Props {
   currentMusic: MusicStruct;
+  colorScheme: ColorScheme;
   isListMode: boolean;
   isLyricsMode: boolean;
   isPlaying: boolean;
+  mode: 'specific' | 'playlist';
   onListClick: () => void;
   onLyricsClick: () => void;
   onAlbumartClick: () => void;
@@ -23,9 +31,11 @@ interface Props {
 
 export default function AlbumContent({
   currentMusic,
+  colorScheme,
   isListMode,
   isLyricsMode,
   isPlaying,
+  mode,
   onListClick,
   onLyricsClick,
   onAlbumartClick,
@@ -57,10 +67,10 @@ export default function AlbumContent({
       {(isListMode || isLyricsMode) && (
         <div className="flex grow items-center">
           <div className="flex grow flex-col">
-            <motion.div layoutId="title" layout className="grow text-20 font-600 text-white">
+            <motion.div layoutId="title" layout className="grow text-18 font-600 text-white">
               {currentMusic.title}
             </motion.div>
-            <motion.div layoutId="artist" layout className="grow text-18 font-500 text-white/30">
+            <motion.div layoutId="artist" layout className="grow text-15 font-500 text-white/60">
               {currentMusic.artist}
             </motion.div>
           </div>
@@ -72,7 +82,7 @@ export default function AlbumContent({
             layout
             className={`flex cursor-pointer items-center justify-center rounded-full p-8 mr-10 ml-10`}
             style={{
-              backgroundColor: isLyricsMode ? currentMusic.color : '#ffffff30',
+              backgroundColor: isLyricsMode ? colorScheme.secondary : '#ffffff30',
               border: isLyricsMode ? `1px solid #ffffff20` : 'none'
             }}
           >
@@ -89,8 +99,11 @@ export default function AlbumContent({
             layout
             className={`flex cursor-pointer items-center justify-center rounded-full p-8`}
             style={{
-              backgroundColor: isListMode ? currentMusic.color : '#ffffff30',
-              border: isListMode ? `1px solid #ffffff20` : 'none'
+              backgroundColor: isListMode ? colorScheme.secondary : '#ffffff30',
+              border: isListMode ? `1px solid #ffffff20` : 'none',
+              width: mode === 'playlist' ? 'inset' : '0px',
+              height: mode === 'playlist' ? 'inset' : '0px',
+              padding: mode === 'playlist' ? 'inset' : '0px',
             }}
           >
             <Icon

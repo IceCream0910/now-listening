@@ -17,9 +17,8 @@
 }
 
 body {
-  background: #000000;
+  background: linear-gradient(rgb(95, 132, 169), rgb(15, 52, 89));
   color: #ffffff;
-
   touch-action: none;
 }
 

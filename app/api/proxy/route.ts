@@ -2,11 +2,20 @@ import { NextResponse } from 'next/server'
 
 
 export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
+    request: Request
 ) {
+    const params = new URL(request.url).searchParams
+    const url = params.get('url')
+
+    if (!url) {
+        return NextResponse.json(
+            { error: 'URL parameter is required' },
+            { status: 400 }
+        )
+    }
+
     try {
-        const response = await fetch(`https://yuntae.in/api/music/lyrics/${params.id}`)
+        const response = await fetch(url, { cache: 'no-store' })
 
         if (!response.ok) {
             return NextResponse.json(
