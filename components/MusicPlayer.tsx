@@ -17,6 +17,8 @@ interface MusicStruct {
   id: string;
   title: string;
   albumart: string;
+  bgColor: string;
+  textColor: string;
 }
 
 interface ColorScheme {
@@ -28,6 +30,7 @@ const initialMusicIndex = 0;
 
 // Utility functions
 const rgbToString = (rgb: number[]) => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+const hexToRgb = (hex: string) => hex.match(/[A-Za-z0-9]{2}/g)!.map(v => parseInt(v, 16));
 const adjustBrightness = (color: number[], amount: number) => color.map(c => Math.max(0, Math.min(255, c + amount)));
 
 export default function MusicPlayer({ songId }: { songId?: string }) {
@@ -63,7 +66,9 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
           duration: Math.floor(item.attributes.durationInMillis / 1000),
           id: item.id,
           title: item.attributes.name,
-          albumart: item.attributes.artwork.url.replace('{w}', '400').replace('{h}', '400'),
+          albumart: item.attributes.artwork.url.replace('{w}', '1000').replace('{h}', '1000'),
+          bgColor: item.attributes.artwork.bgColor,
+          textColor: item.attributes.artwork.textColor1
         }));
         setMusicsData(transformedData);
       } catch (error) {
@@ -82,7 +87,9 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
           duration: Math.floor(item.attributes.durationInMillis / 1000),
           id: item.id,
           title: item.attributes.name,
-          albumart: item.attributes.artwork.url.replace('{w}', '400').replace('{h}', '400'),
+          albumart: item.attributes.artwork.url.replace('{w}', '1000').replace('{h}', '1000'),
+          bgColor: item.attributes.artwork.bgColor,
+          textColor: item.attributes.artwork.textColor1
         }));
         setMusicsData(transformedData);
       } catch (error) {
@@ -102,13 +109,9 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
     async function extractColors() {
       if (currentMusic) {
         try {
-          const palette = await average(currentMusic.albumart, { format: 'rgb' });
-          const mainColor = adjustBrightness(palette as number[], -20);
-          const secondaryColor = adjustBrightness(palette as number[], -80);
-
           setColorScheme({
-            background: `linear-gradient(to bottom, ${rgbToString(mainColor)}, ${rgbToString(adjustBrightness(mainColor, -80))})`,
-            secondary: rgbToString(secondaryColor)
+            background: `linear-gradient(to bottom, #${currentMusic.bgColor}, ${rgbToString(adjustBrightness(hexToRgb(currentMusic.bgColor), -150))})`,
+            secondary: `#${currentMusic.textColor}`
           });
         } catch (error) {
           console.error('Error extracting colors:', error);
