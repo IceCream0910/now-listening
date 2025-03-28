@@ -9,7 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.3",
     "@types/color-thief-node": "^1.0.4",
+    "@vercel/edge-config": "^1.4.0",
     "color.js": "^1.2.0",
     "framer-motion": "^11.3.27",
     "lottie-react": "^2.4.0",

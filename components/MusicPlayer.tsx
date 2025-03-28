@@ -327,6 +327,7 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
                 currentMusicIndex={currentMusicIndex}
                 onLyricClick={handleLyricClick}
                 currentTime={currentTime}
+                youtubeId={currentVideoId}
               />
 
             </div>

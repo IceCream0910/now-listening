@@ -15,13 +15,14 @@ interface Props {
   currentMusicIndex: number;
   onLyricClick: (index: number) => void;
   currentTime: number;
+  youtubeId?: string;
 }
 
 interface LyricLine {
   text: string;
   start: number;
   end: number;
-  syllables: {
+  syllables?: {
     text: string;
     start: number;
     end: number;
@@ -89,24 +90,96 @@ const parseTimeToSeconds = (time: string): number => {
   return seconds;
 };
 
-export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, currentTime }: Props) {
+export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, currentTime, youtubeId }: Props) {
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [lyricsType, setLyricsType] = useState<string>('syllable');
   const [activeLyricIndex, setActiveLyricIndex] = useState<number>(0);
   const [isEmptyTerm, setIsEmptyTerm] = useState<boolean>(false);
+  const [isGeneratingLyrics, setIsGeneratingLyrics] = useState<boolean>(false);
 
   useEffect(() => {
+    // Reset lyrics state when changing songs to avoid using previous song's data
+    setLyrics([]);
+    setLyricsType('syllable');
+    setActiveLyricIndex(0);
+    setIsEmptyTerm(false);
+    setIsGeneratingLyrics(false);
+
     const fetchLyrics = async () => {
       try {
         const response = await fetch(`/api/proxy?url=https://yuntae.in/api/music/lyrics/${musicsData[currentMusicIndex].id}`);
         const data: any = await response.json();
         if (data.errors) {
           setLyricsType('none');
+
+          const songId = musicsData[currentMusicIndex].id;
+          try {
+            const autoGenResponse = await fetch(`/api/lyrics/auto-generated?songId=${songId}`);
+            if (autoGenResponse.ok) {
+              const autoGenData = await autoGenResponse.json();
+              setLyrics(autoGenData);
+              setLyricsType('auto');
+              return;
+            }
+          } catch (error) {
+            console.error('Error fetching auto-generated lyrics:', error);
+          }
+
+          setIsGeneratingLyrics(true);
+          if (youtubeId) {
+            try {
+              fetch(`/api/lyrics/generate?songId=${songId}&youtubeId=${youtubeId}`, {
+                method: 'POST'
+              }).catch(error => {
+                console.error('Error triggering lyrics generation:', error);
+              });
+            } catch (error) {
+              console.error('Error triggering lyrics generation:', error);
+            }
+          }
           return;
         }
+
         const parsedLyrics = parseTTML(data.data[0].attributes.ttml);
         if (parsedLyrics[parsedLyrics.length - 1].end <= 0) { // syllable 가사 미지원 곡
           setLyricsType('full');
+
+          const songId = musicsData[currentMusicIndex].id;
+          try {
+            const autoGenResponse = await fetch(`/api/lyrics/auto-generated?songId=${songId}`);
+            if (autoGenResponse.ok) {
+              const autoGenData = await autoGenResponse.json();
+              setLyrics(autoGenData);
+              console.log(autoGenData)
+              setLyricsType('auto');
+              return;
+            }
+          } catch (error) {
+            console.error('Error fetching auto-generated lyrics:', error);
+          }
+
+          setIsGeneratingLyrics(true);
+          setTimeout(() => {
+            if (youtubeId) {
+              try {
+                const fullLyricsText = parsedLyrics.map(lyric => lyric.text).join('\n');
+
+                fetch(`/api/lyrics/generate?songId=${songId}&youtubeId=${youtubeId}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    fullLyrics: fullLyricsText
+                  })
+                }).catch(error => {
+                  console.error('Error triggering lyrics generation:', error);
+                });
+              } catch (error) {
+                console.error('Error triggering lyrics generation:', error);
+              }
+            }
+          }, 2000);
         } else {
           setLyricsType('syllable');
         }
@@ -117,7 +190,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
     };
 
     fetchLyrics();
-  }, [currentMusicIndex, musicsData]);
+  }, [currentMusicIndex, musicsData, youtubeId]);
 
   useEffect(() => {
     const newActiveIndex = lyrics.findIndex(
@@ -150,6 +223,17 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
           className="text-center font-black w-full h-full overflow-y-auto"
           style={{ fontSize: '1rem', fontWeight: 600, wordBreak: 'keep-all' }}
         >
+          {isGeneratingLyrics && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              className="text-center mb-8"
+              style={{ fontSize: '0.9rem' }}
+            >
+              AI가 싱크 가사를 생성하고 있어요. 몇 분 후에 다시 들어오면 싱크 가사가 표시될 거예요.
+            </motion.div>
+          )}
+
           {lyrics.map((lyric, index) => (
             <motion.span
               key={index}
@@ -160,6 +244,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
         </motion.div>
       </div>
     )
+
   } else if (lyricsType === 'syllable') {
     return (
       <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
@@ -189,7 +274,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
               className="text-center font-black"
               style={{ fontSize: '2rem', fontWeight: 900, wordBreak: 'keep-all' }}
             >
-              {lyrics[activeLyricIndex].syllables.map((syllable, index) => (
+              {lyrics[activeLyricIndex]?.syllables?.map((syllable, index) => (
                 <motion.span
                   key={index}
                   initial={{ opacity: 0, y: 5 }}
@@ -200,12 +285,55 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
                   transition={{ duration: 0.2 }}
                   className="inline-block"
                 >
-                  {index === lyrics[activeLyricIndex].syllables.length - 1 ? syllable.text.trim() : syllable.text}
+                  {index === (lyrics[activeLyricIndex]?.syllables ?? []).length - 1 ? syllable.text.trim() : syllable.text}
                 </motion.span>
               ))}
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+    );
+  } else if (lyricsType === 'auto') {
+    return (
+      <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
+        <AnimatePresence>
+          {isEmptyTerm && (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="100">
+                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="15" cy="25">
+                  <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.4"></animate>
+                </circle>
+                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="26" cy="25">
+                  <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.2"></animate>
+                </circle>
+                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="37" cy="25">
+                  <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
+                </circle>
+              </svg>
+              <button onClick={skipIntro} className='flex cursor-pointer items-center justify-center bg-white/10 px-14 py-6 active:scale-95 transition-all' style={{ position: 'absolute', bottom: '200px', fontSize: '13px', borderRadius: '10px' }}>건너뛰기</button>
+            </>
+          )}
+          <motion.div
+            key={activeLyricIndex}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="text-center font-black"
+            style={{ fontSize: '2rem', fontWeight: 900, wordBreak: 'keep-all' }}
+          >
+            {lyrics[activeLyricIndex]?.text || ''}
+          </motion.div>
+        </AnimatePresence>
+
+        {!isEmptyTerm && <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.4 }}
+          className="text-center mt-4 text-[0.8rem] absolute bottom-[200px] max-w-[80%]"
+          style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+        >
+          AI가 자동 생성한 가사이므로 정확하지 않을 수 있어요.
+        </motion.div>}
+
       </div>
     );
   } else {
@@ -221,7 +349,19 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
         >
           가사 정보 없음
         </motion.div>
-      </div>
-    )
+
+        {isGeneratingLyrics && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
+            className="text-center mt-4 text-[0.8rem] absolute bottom-[200px] max-w-[80%]"
+            style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+          >
+            AI가 가사를 생성하고 있어요. 몇 분 후에 다시 들어오면 가사가 표시될 거예요.
+          </motion.div>
+        )
+        }
+      </div >
+    );
   }
 }
