@@ -1,35 +1,51 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export const config = {
+    runtime: 'edge',
+};
+
+const supabase = createClient(
+    process.env.SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_KEY || ''
+);
+
+export default async function handler(req: Request) {
     if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Method not allowed' });
+        return new Response(JSON.stringify({ message: 'Method not allowed' }), {
+            status: 405,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
-    const { songId, youtubeId } = req.query;
+    const url = new URL(req.url);
+    const songId = url.searchParams.get('songId');
+    const youtubeId = url.searchParams.get('youtubeId');
 
-    // Parse request body to get the full lyrics if provided
     let fullLyrics = '';
     try {
         if (req.body) {
-            const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+            const body = await req.json();
             fullLyrics = body.fullLyrics || '';
         }
     } catch (error) {
         console.error('Error parsing request body:', error);
     }
 
-    if (!songId || typeof songId !== 'string') {
-        return res.status(400).json({ message: 'Song ID is required' });
+    if (!songId) {
+        return new Response(JSON.stringify({ message: 'Song ID is required' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
-    if (!youtubeId || typeof youtubeId !== 'string') {
-        return res.status(400).json({ message: 'YouTube ID is required' });
+    if (!youtubeId) {
+        return new Response(JSON.stringify({ message: 'YouTube ID is required' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
-    // Check if generation for this song is already in progress using Supabase
     try {
-        // Check if this song is already in the pending_jobs table
         const { data: pendingJob } = await supabase
             .from('pending_jobs')
             .select('song_id')
@@ -37,10 +53,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .single();
 
         if (pendingJob) {
-            return res.status(202).json({ message: 'Lyrics generation already in progress' });
+            return new Response(JSON.stringify({ message: 'Lyrics generation already in progress' }), {
+                status: 202,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
-        // Add songId to the pending_jobs table
         await supabase
             .from('pending_jobs')
             .insert({
@@ -50,12 +68,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             });
     } catch (error) {
         console.error('Error checking/updating pending generations:', error);
-        // Continue anyway, not critical
     }
 
-    // Send immediate response to avoid timeout
-    res.status(202).json({ message: 'Lyrics generation started' });
+    const response = new Response(JSON.stringify({ message: 'Lyrics generation started' }), {
+        status: 202,
+        headers: { 'Content-Type': 'application/json' }
+    });
 
+    const ctx = { waitUntil: (promise: Promise<any>) => { return promise; } };
+    ctx.waitUntil(generateLyrics(songId, youtubeId, fullLyrics));
+
+    return response;
+}
+
+async function generateLyrics(songId: string, youtubeId: string, fullLyrics: string) {
     try {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
