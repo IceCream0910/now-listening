@@ -9,7 +9,7 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_KEY || ''
 );
 
-export default async function handler(req: Request) {
+export default async function handler(req: Request, context: { waitUntil: (promise: Promise<any>) => void }) {
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ message: 'Method not allowed' }), {
             status: 405,
@@ -70,15 +70,14 @@ export default async function handler(req: Request) {
         console.error('Error checking/updating pending generations:', error);
     }
 
-    const response = new Response(JSON.stringify({ message: 'Lyrics generation started' }), {
+    context.waitUntil(
+        generateLyrics(songId, youtubeId, fullLyrics)
+    );
+
+    return new Response(JSON.stringify({ message: 'Lyrics generation started' }), {
         status: 202,
         headers: { 'Content-Type': 'application/json' }
     });
-
-    const ctx = { waitUntil: (promise: Promise<any>) => { return promise; } };
-    ctx.waitUntil(generateLyrics(songId, youtubeId, fullLyrics));
-
-    return response;
 }
 
 async function generateLyrics(songId: string, youtubeId: string, fullLyrics: string) {

@@ -9,6 +9,7 @@ import Playlist from '@/components/Playlist';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lyrics from './Lyrics';
 import { useRouter } from 'next/navigation';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface MusicStruct {
   artist: string;
@@ -28,7 +29,6 @@ interface ColorScheme {
 
 const initialMusicIndex = 0;
 
-// Utility functions
 const rgbToString = (rgb: number[]) => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 const hexToRgb = (hex: string) => hex.match(/[A-Za-z0-9]{2}/g)!.map(v => parseInt(v, 16));
 const adjustBrightness = (color: number[], amount: number) => color.map(c => Math.max(0, Math.min(255, c + amount)));
@@ -141,6 +141,11 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
     const fetchVideoId = async () => {
       const response = await fetch(`/api/search?query=${currentMusic.title} ${currentMusic.artist} auto-generated`, { cache: "no-store" });
       const result = await response.json();
+      if (!result.data || result.data.length === 0) {
+        toast.error('음원을 불러올 수 없어요. 저작권 등의 문제로 인해 아직 지원하지 않는 곡일 수 있어요.');
+        player.pauseVideo()
+        return;
+      }
       setCurrentVideoId(result.data.id);
       console.log(result.data.id);
     };
@@ -283,6 +288,7 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
 
   return (
     <AnimatePresence>
+      <Toaster />
       <motion.div
         initial={{ background: 'linear-gradient(rgb(95, 132, 169), rgb(15, 52, 89))' }}
         animate={{ background: colorScheme.background }}
