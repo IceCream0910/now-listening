@@ -9,7 +9,7 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_KEY || ''
 );
 
-export default async function handler(req: Request, context: { waitUntil: (promise: Promise<any>) => void }) {
+export default async function handler(req: Request) {
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ message: 'Method not allowed' }), {
             status: 405,
@@ -70,26 +70,75 @@ export default async function handler(req: Request, context: { waitUntil: (promi
         console.error('Error checking/updating pending generations:', error);
     }
 
-    context.waitUntil(
-        generateLyrics(songId, youtubeId, fullLyrics)
-    );
+    // Create a streaming response to keep connection alive
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+        async start(controller) {
+            // Send initial message
+            controller.enqueue(encoder.encode(JSON.stringify({ status: 'started', message: 'Lyrics generation started' }) + '\n'));
 
-    return new Response(JSON.stringify({ message: 'Lyrics generation started' }), {
-        status: 202,
-        headers: { 'Content-Type': 'application/json' }
+            try {
+                // Keep the connection alive with periodic updates
+                const keepAliveInterval = setInterval(() => {
+                    controller.enqueue(encoder.encode(JSON.stringify({ status: 'processing' }) + '\n'));
+                }, 5000); // Send a keep-alive message every 5 seconds
+
+                await generateLyrics(songId, youtubeId, fullLyrics,
+                    // Progress callback
+                    (progress) => {
+                        controller.enqueue(encoder.encode(JSON.stringify({
+                            status: 'processing',
+                            message: progress
+                        }) + '\n'));
+                    }
+                );
+
+                // Clear the interval when done
+                clearInterval(keepAliveInterval);
+
+                // Send completion message
+                controller.enqueue(encoder.encode(JSON.stringify({
+                    status: 'completed',
+                    message: 'Lyrics generation completed successfully'
+                }) + '\n'));
+            } catch (error) {
+                controller.enqueue(encoder.encode(JSON.stringify({
+                    status: 'error',
+                    message: 'Error generating lyrics'
+                }) + '\n'));
+            } finally {
+                controller.close();
+            }
+        }
+    });
+
+    return new Response(stream, {
+        status: 200,
+        headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+        }
     });
 }
 
-async function generateLyrics(songId: string, youtubeId: string, fullLyrics: string) {
+async function generateLyrics(
+    songId: string,
+    youtubeId: string,
+    fullLyrics: string,
+    progressCallback: (message: string) => void
+) {
     try {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
+            progressCallback('API key not found');
             console.error('GEMINI_API_KEY is not set');
             await removeSongFromPending(songId);
             return;
         }
 
         const youtubeUrl = `https://youtu.be/${youtubeId}`;
+        progressCallback(`Processing YouTube video ${youtubeId}`);
         console.log(`Generating lyrics for song ${songId} from YouTube video ${youtubeUrl}`);
 
         const contents = [
@@ -107,6 +156,7 @@ async function generateLyrics(songId: string, youtubeId: string, fullLyrics: str
         ];
 
         if (fullLyrics) {
+            progressCallback('Using provided lyrics as reference');
             contents.push({
                 role: 'user',
                 parts: [
@@ -116,6 +166,7 @@ async function generateLyrics(songId: string, youtubeId: string, fullLyrics: str
                 ]
             });
         } else {
+            progressCallback('Generating lyrics from scratch');
             contents.push({
                 role: 'user',
                 parts: [
@@ -126,6 +177,7 @@ async function generateLyrics(songId: string, youtubeId: string, fullLyrics: str
             });
         }
 
+        progressCallback('Sending request to Gemini API');
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-03-25:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: {
@@ -137,7 +189,7 @@ async function generateLyrics(songId: string, youtubeId: string, fullLyrics: str
                     role: 'user',
                     parts: [
                         {
-                            text: "당신은 영상에 나오는 노래의 가사를 구절 단위로 추출하여, 각 구절이 등장하는 정확한 시간(초 단위)의 타임라인과 함께 JSON 형식으로 출력하는 싱크 가사 생성기입니다. JSON 배열의 각 항목은 반드시 `text`, `start`, `end` 필드를 포함해야 하며, `start`와 `end`는 실제 영상에서 해당 구절이 시작되고 끝나는 시간을 초 단위로 정확하게 반영해야 합니다.\n예시 형식:\n```json\n[\n   {\n    \"text\": \"그 날의 우린\",\n    \"start\": 55.244,\n    \"end\": 58.497\n},{\n    \"text\": \"뜨겁게 사랑했지\",\n    \"start\": 59.252,\n    \"end\": 65.723\n}\n...\n]\n```\n완성된 형태의 JSON 데이터만을 출력하십시오."
+                            text: "당신은 영상에 나오는 노래의 가사를 구절 단위로 추출하여, 각 구절이 등장하는 정확한 시간(초 단위)의 타임라인과 함께 JSON 형식으로 출력하는 싱크 가사 생성기입니다. JSON 배열의 각 항목은 반드시 `text`, `start`, `end` 필드를 포함해야 하며, `start`와 `end`는 실제 영상에서 해당 구절이 시작되고 끝나는 시간을 초 단위로 정확하게 반영해야 합니다.\n예시 형식:\n```json\n[\n   {\n    \"text\": \"그 날의 우린\",\n    \"start\": 55.244,\n    \"end\": 58.497\n},{\n    \"text\": \"뜨겁게 사랑했지\",\n    \"start\": 59.252,\n    \"end\": 65.723\n}\n...\n]\n```\n완성된 형태의 JSON 데이터만을 출력하십시오. 코드 스니펫으로 wrapping 하지 말고, JSON 데이터를 평문 텍스트로 출력하십시오. JSON 데이터 외에 다른 텍스트는 포함하지 마십시오."
                         }
                     ]
                 },
@@ -151,16 +203,20 @@ async function generateLyrics(songId: string, youtubeId: string, fullLyrics: str
             })
         });
 
+        progressCallback('Processing Gemini API response');
         const result = await response.json();
+        console.log(result)
 
         const generatedContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!generatedContent) {
+            progressCallback('No content was generated');
             console.error('No content was generated');
             await removeSongFromPending(songId);
             return;
         }
 
+        progressCallback('Parsing generated lyrics');
         let parsedLyrics;
         try {
             const jsonMatch = generatedContent.match(/\[\s*\{[\s\S]*?\}\s*\]/);
@@ -170,11 +226,13 @@ async function generateLyrics(songId: string, youtubeId: string, fullLyrics: str
                 parsedLyrics = JSON.parse(generatedContent);
             }
         } catch (error) {
+            progressCallback('Failed to parse generated lyrics');
             console.error('Failed to parse generated lyrics as JSON:', error);
             await removeSongFromPending(songId);
             return;
         }
 
+        progressCallback('Saving lyrics to database');
         console.log(`Generated lyrics for song ${songId} successfully: ${JSON.stringify(parsedLyrics)}`);
         await supabase
             .from('generated_lyrics')
@@ -184,9 +242,11 @@ async function generateLyrics(songId: string, youtubeId: string, fullLyrics: str
                 created_at: new Date().toISOString()
             });
 
+        progressCallback('Lyrics saved successfully');
         console.log(`Generated lyrics for song ${songId} saved successfully`);
         await removeSongFromPending(songId);
     } catch (error) {
+        progressCallback(`Error: ${error instanceof Error ? error.message : String(error)}`);
         console.error('Error generating lyrics:', error);
         await removeSongFromPending(songId);
     }
