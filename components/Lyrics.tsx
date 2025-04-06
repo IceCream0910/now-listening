@@ -95,7 +95,8 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
   const [lyricsType, setLyricsType] = useState<string>('syllable');
   const [activeLyricIndex, setActiveLyricIndex] = useState<number>(0);
   const [isEmptyTerm, setIsEmptyTerm] = useState<boolean>(false);
-  const [isGeneratingLyrics, setIsGeneratingLyrics] = useState<boolean>(false);
+  const [generationStatus, setGenerationStatus] = useState<'not_started' | 'generating' | 'completed'>('not_started');
+  const [generationProgress, setGenerationProgress] = useState<string>('');
 
   useEffect(() => {
     // Reset lyrics state when changing songs to avoid using previous song's data
@@ -103,7 +104,8 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
     setLyricsType('syllable');
     setActiveLyricIndex(0);
     setIsEmptyTerm(false);
-    setIsGeneratingLyrics(false);
+    setGenerationStatus('not_started');
+    setGenerationProgress('');
 
     const fetchLyrics = async () => {
       try {
@@ -119,23 +121,11 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
               const autoGenData = await autoGenResponse.json();
               setLyrics(autoGenData);
               setLyricsType('auto');
+              setGenerationStatus('completed');
               return;
             }
           } catch (error) {
             console.error('Error fetching auto-generated lyrics:', error);
-          }
-
-          setIsGeneratingLyrics(true);
-          if (youtubeId) {
-            try {
-              fetch(`/api/lyrics/generate?songId=${songId}&youtubeId=${youtubeId}`, {
-                method: 'POST'
-              }).catch(error => {
-                console.error('Error triggering lyrics generation:', error);
-              });
-            } catch (error) {
-              console.error('Error triggering lyrics generation:', error);
-            }
           }
           return;
         }
@@ -150,36 +140,14 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
             if (autoGenResponse.ok) {
               const autoGenData = await autoGenResponse.json();
               setLyrics(autoGenData);
-              console.log(autoGenData)
+              console.log(autoGenData);
               setLyricsType('auto');
+              setGenerationStatus('completed');
               return;
             }
           } catch (error) {
             console.error('Error fetching auto-generated lyrics:', error);
           }
-
-          setIsGeneratingLyrics(true);
-          setTimeout(() => {
-            if (youtubeId) {
-              try {
-                const fullLyricsText = parsedLyrics.map(lyric => lyric.text).join('\n');
-
-                fetch(`/api/lyrics/generate?songId=${songId}&youtubeId=${youtubeId}`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    fullLyrics: fullLyricsText
-                  })
-                }).catch(error => {
-                  console.error('Error triggering lyrics generation:', error);
-                });
-              } catch (error) {
-                console.error('Error triggering lyrics generation:', error);
-              }
-            }
-          }, 2000);
         } else {
           setLyricsType('syllable');
         }
@@ -212,9 +180,102 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
     onLyricClick(startTime);
   };
 
+  const generateLyrics = async () => {
+    if (!youtubeId) {
+      alert('YouTube 영상 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    setGenerationStatus('generating');
+    setGenerationProgress('가사 생성 시작 중...');
+
+    const songId = musicsData[currentMusicIndex].id;
+    const fullLyricsText = lyricsType === 'full' ? lyrics.map(lyric => lyric.text).join('\n') : '';
+
+    try {
+      // Create a streaming fetch request
+      const response = await fetch(`/api/lyrics/generate?songId=${songId}&youtubeId=${youtubeId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullLyrics: fullLyricsText
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+      }
+
+      // Handle the streaming response
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+
+      // Process the stream
+      const processStream = async () => {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Decode and process the chunk
+          const chunk = new TextDecoder().decode(value);
+          const lines = chunk.split('\n').filter(line => line.trim());
+
+          for (const line of lines) {
+            try {
+              const update = JSON.parse(line);
+              if (update.status === 'completed') {
+                // When completed, fetch the generated lyrics
+                const autoGenResponse = await fetch(`/api/lyrics/auto-generated?songId=${songId}`);
+                if (autoGenResponse.ok) {
+                  const autoGenData = await autoGenResponse.json();
+                  setLyrics(autoGenData);
+                  setLyricsType('auto');
+                  setGenerationStatus('completed');
+                }
+              } else if (update.message) {
+                setGenerationProgress(update.message);
+              }
+            } catch (e) {
+              console.error('Error parsing streaming update:', e);
+            }
+          }
+        }
+      };
+
+      processStream().catch(error => {
+        console.error('Error processing stream:', error);
+        setGenerationStatus('not_started');
+      });
+    } catch (error) {
+      console.error('Error generating lyrics:', error);
+      setGenerationStatus('not_started');
+      alert('가사 생성에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
   if (lyricsType === 'full') {
     return (
       <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
+        {generationStatus === 'not_started' && (
+          <button
+            onClick={generateLyrics}
+            className="flex cursor-pointer items-center justify-center bg-white/10 px-12 py-6 active:scale-95 transition-all rounded-md hover:bg-white/20 mb-16"
+            style={{ fontSize: '14px', borderRadius: '10px' }}
+          >
+            AI로 싱크 가사 생성
+          </button>
+        )}
+
+        {generationStatus === 'generating' && (
+          <span className="text-center mb-12 text-[0.8rem] max-w-[80%]">
+            AI에게 싱크 가사 생성을 요청했어요.
+          </span>
+        )}
+
         <motion.div
           key={activeLyricIndex}
           initial={{ opacity: 0, y: 20 }}
@@ -223,28 +284,14 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
           className="text-center font-black w-full h-full overflow-y-auto"
           style={{ fontSize: '1rem', fontWeight: 600, wordBreak: 'keep-all' }}
         >
-          {isGeneratingLyrics && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.6 }}
-              className="text-center mb-8"
-              style={{ fontSize: '0.9rem' }}
-            >
-              AI가 싱크 가사를 생성하고 있어요. 몇 분 후에 다시 들어오면 싱크 가사가 표시될 거예요.
-            </motion.div>
-          )}
-
           {lyrics.map((lyric, index) => (
-            <motion.span
-              key={index}
-            >
+            <motion.span key={index}>
               {lyric.text}<br />
             </motion.span>
           ))}
         </motion.div>
       </div>
     )
-
   } else if (lyricsType === 'syllable') {
     return (
       <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
@@ -252,13 +299,13 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
           {isEmptyTerm && (
             <>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="100">
-                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="15" cy="25">
+                <circle fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="2" r="3" cx="15" cy="25">
                   <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.4"></animate>
                 </circle>
-                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="26" cy="25">
+                <circle fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="2" r="3" cx="26" cy="25">
                   <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.2"></animate>
                 </circle>
-                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="37" cy="25">
+                <circle fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="2" r="3" cx="37" cy="25">
                   <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
                 </circle>
               </svg>
@@ -300,13 +347,13 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
           {isEmptyTerm && (
             <>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="100">
-                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="15" cy="25">
+                <circle fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="2" r="3" cx="15" cy="25">
                   <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.4"></animate>
                 </circle>
-                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="26" cy="25">
+                <circle fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="2" r="3" cx="26" cy="25">
                   <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="-.2"></animate>
                 </circle>
-                <circle fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2" r="3" cx="37" cy="25">
+                <circle fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="2" r="3" cx="37" cy="25">
                   <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
                 </circle>
               </svg>
@@ -333,12 +380,33 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
         >
           AI가 자동 생성한 가사이므로 정확하지 않을 수 있어요.
         </motion.div>}
-
       </div>
     );
   } else {
     return (
       <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
+        {generationStatus === 'not_started' && (
+          <button
+            onClick={generateLyrics}
+            className="flex cursor-pointer items-center justify-center bg-white/10 px-12 py-6 active:scale-95 transition-all rounded-md hover:bg-white/20 mb-16"
+            style={{ fontSize: '14px', borderRadius: '10px' }}
+          >
+            AI로 싱크 가사 생성
+          </button>
+        )}
+
+        {generationStatus === 'generating' && (
+          <div className="absolute top-4 flex items-center justify-center bg-white/10 px-6 py-3 rounded-md gap-2" style={{ fontSize: '14px' }}>
+            <span className="inline-block mr-2">
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </span>
+            {generationProgress}
+          </div>
+        )}
+
         <motion.div
           key={activeLyricIndex}
           initial={{ opacity: 0, y: 20 }}
@@ -349,19 +417,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
         >
           가사 정보 없음
         </motion.div>
-
-        {isGeneratingLyrics && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.4 }}
-            className="text-center mt-4 text-[0.8rem] absolute bottom-[200px] max-w-[80%]"
-            style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
-          >
-            AI가 가사를 생성하고 있어요. 몇 분 후에 다시 들어오면 가사가 표시될 거예요.
-          </motion.div>
-        )
-        }
-      </div >
+      </div>
     );
   }
 }
