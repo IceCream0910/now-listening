@@ -17,11 +17,23 @@ export async function GET(request) {
 
         const response = await fetch('https://music.youtube.com/youtubei/v1/search?prettyPrint=false', options);
         const data = await response.json();
-        const videoId =  data.contents.tabbedSearchResultsRenderer.tabs[0].tabRenderer.content.sectionListRenderer.contents[0].musicCardShelfRenderer.title.runs[0].navigationEndpoint.watchEndpoint.videoId;
+        console.log(data);
+
+        let videoId = null;
+        try {
+            videoId =
+                data?.contents?.tabbedSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]?.musicCardShelfRenderer?.title?.runs?.[0]?.navigationEndpoint?.watchEndpoint?.videoId;
+        } catch (e) {
+            return NextResponse.json({ error: 'Video ID not found in response', response: data }, { status: 404 });
+        }
+
+        if (!videoId) {
+            return NextResponse.json({ error: 'Video ID not found in response', response: data }, { status: 404 });
+        }
 
         return NextResponse.json({ videoId }, { status: 200 });
     } catch (error) {
         console.error('Error occurred during search:', error);
-        return NextResponse.json({ error: 'An error occurred during the search' }, { status: 500 });
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
