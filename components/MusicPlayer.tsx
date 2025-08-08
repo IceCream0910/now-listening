@@ -20,6 +20,7 @@ interface MusicStruct {
   albumart: string;
   bgColor: string;
   textColor: string;
+  isrc: string;
 }
 
 interface ColorScheme {
@@ -68,7 +69,8 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
           title: item.attributes.name,
           albumart: item.attributes.artwork.url.replace('{w}', '1000').replace('{h}', '1000'),
           bgColor: item.attributes.artwork.bgColor,
-          textColor: item.attributes.artwork.textColor1
+          textColor: item.attributes.artwork.textColor1,
+          isrc: item.attributes.isrc
         }));
         setMusicsData(transformedData);
       } catch (error) {
@@ -89,7 +91,8 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
           title: item.attributes.name,
           albumart: item.attributes.artwork.url.replace('{w}', '1000').replace('{h}', '1000'),
           bgColor: item.attributes.artwork.bgColor,
-          textColor: item.attributes.artwork.textColor1
+          textColor: item.attributes.artwork.textColor1,
+          isrc: item.attributes.isrc
         }));
         setMusicsData(transformedData);
       } catch (error) {
@@ -139,7 +142,7 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
     if (!player) return;
 
     const fetchVideoId = async () => {
-      const response = await fetch(`/api/search?query=${currentMusic.title} ${currentMusic.artist}`, { cache: "no-store" });
+      const response = await fetch(`/api/search?query=${currentMusic.isrc || `${currentMusic.title} ${currentMusic.artist} auto-generated`}`, { cache: "no-store" });
       const result = await response.json();
       if (!result.videoId || result.videoId.length === 0) {
         toast.error('음원을 불러올 수 없어요. 저작권 등의 문제로 인해 아직 지원하지 않는 곡일 수 있어요.');
