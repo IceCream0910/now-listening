@@ -144,13 +144,13 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
     const fetchVideoId = async () => {
       const response = await fetch(`/api/search?query=${currentMusic.isrc || `${currentMusic.title} ${currentMusic.artist} auto-generated`}`, { cache: "no-store" });
       const result = await response.json();
-      if (!result.videoId || result.videoId.length === 0) {
+      if (!result.data.id || result.data.id.length === 0) {
         toast.error('음원을 불러올 수 없어요. 저작권 등의 문제로 인해 아직 지원하지 않는 곡일 수 있어요.');
         player.pauseVideo()
         return;
       }
-      setCurrentVideoId(result.videoId);
-      console.log(result.videoId);
+      setCurrentVideoId(result.data.id);
+      console.log(result.data.id);
     };
 
     fetchVideoId();
