@@ -260,15 +260,6 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
   if (lyricsType === 'full') {
     return (
       <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
-        {generationStatus === 'not_started' && (
-          <button
-            onClick={generateLyrics}
-            className="flex cursor-pointer items-center justify-center bg-white/10 px-12 py-6 active:scale-95 transition-all rounded-md hover:bg-white/20 mb-16"
-            style={{ fontSize: '14px', borderRadius: '10px' }}
-          >
-            AI로 싱크 가사 생성
-          </button>
-        )}
 
         {generationStatus === 'generating' && (
           <span className="text-center mb-12 text-[0.8rem] max-w-[80%]">
@@ -385,15 +376,6 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
   } else {
     return (
       <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
-        {generationStatus === 'not_started' && (
-          <button
-            onClick={generateLyrics}
-            className="flex cursor-pointer items-center justify-center bg-white/10 px-12 py-6 active:scale-95 transition-all rounded-md hover:bg-white/20 mb-16"
-            style={{ fontSize: '14px', borderRadius: '10px' }}
-          >
-            AI로 싱크 가사 생성
-          </button>
-        )}
 
         {generationStatus === 'generating' && (
           <div className="absolute top-4 flex items-center justify-center bg-white/10 px-6 py-3 rounded-md gap-2" style={{ fontSize: '14px' }}>
