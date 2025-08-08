@@ -109,7 +109,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
 
     const fetchLyrics = async () => {
       try {
-        const response = await fetch(`https://yuntae.in/api/music/lyrics/${musicsData[currentMusicIndex].id}`);
+        const response = await fetch(`/api/proxy?url=https://yuntae.in/api/music/lyrics/${musicsData[currentMusicIndex].id}`);
         const data: any = await response.json();
         if (data.errors) {
           setLyricsType('none');

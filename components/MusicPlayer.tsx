@@ -58,7 +58,7 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
   useEffect(() => {
     async function getRecent() {
       try {
-        const response = await fetch(`https://yuntae.in/api/music/recent`, { cache: 'no-store' });
+        const response = await fetch(`/api/proxy?url=https://yuntae.in/api/music/recent`, { cache: 'no-store' });
         const result = await response.json();
         const transformedData: MusicStruct[] = result.data.map((item: any) => ({
           artist: item.attributes.artistName,
@@ -79,7 +79,7 @@ export default function MusicPlayer({ songId }: { songId?: string }) {
 
     async function getSpecific(id: string) {
       try {
-        const response = await fetch(`https://yuntae.in/api/music/song/${songId}`, { cache: 'no-store' });
+        const response = await fetch(`/api/proxy?url=https://yuntae.in/api/music/song/${songId}`, { cache: 'no-store' });
         const result = await response.json();
         const transformedData: MusicStruct[] = result.data.map((item: any) => ({
           artist: item.attributes.artistName,
