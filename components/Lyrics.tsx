@@ -309,7 +309,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
                   <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
                 </circle>
               </svg>
-              <button onClick={skipIntro} className='flex cursor-pointer items-center justify-center bg-white/10 px-14 py-6 active:scale-95 transition-all' style={{ position: 'absolute', bottom: '200px', fontSize: '13px', borderRadius: '10px' }}>건너뛰기</button>
+              <button onClick={skipIntro} className='flex cursor-pointer items-center justify-center bg-white/10 px-14 py-6 active:scale-95 transition-all' style={{ fontSize: '13px', borderRadius: '10px' }}>건너뛰기</button>
             </>
           )}
           {lyrics[activeLyricIndex] && !isEmptyTerm && (
@@ -357,7 +357,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
                   <animate attributeName="opacity" calcMode="spline" dur="2" values="1;0;1;" keySplines=".5 0 .5 1;.5 0 .5 1" repeatCount="indefinite" begin="0"></animate>
                 </circle>
               </svg>
-              <button onClick={skipIntro} className='flex cursor-pointer items-center justify-center bg-white/10 px-14 py-6 active:scale-95 transition-all' style={{ position: 'absolute', bottom: '200px', fontSize: '13px', borderRadius: '10px' }}>건너뛰기</button>
+              <button onClick={skipIntro} className='flex cursor-pointer items-center justify-center bg-white/10 px-14 py-6 active:scale-95 transition-all' style={{  fontSize: '13px', borderRadius: '10px' }}>건너뛰기</button>
             </>
           )}
           <motion.div
