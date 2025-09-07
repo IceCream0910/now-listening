@@ -40,7 +40,7 @@ export default function Playlist({ musicsData, currentMusicIndex, onMusicClick }
       ref={scrollRef}
       animate={{ opacity: 1, transition: { delay: 0.1, duration: 0.3, ease: 'circOut' }, y: 0 }}
       initial={{ opacity: 0, y: 300 }}
-      className="scrollbar-hide mx-auto flex size-full flex-col gap-12 self-stretch overflow-y-scroll md:max-w-[400px]"
+      className="scrollbar-hide mx-auto flex h-full max-h-full flex-col gap-12 self-stretch overflow-y-auto md:max-w-[400px]"
     >
       <AnimatePresence>
         {musics.map((music, index) => (

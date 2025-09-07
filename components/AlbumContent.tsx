@@ -46,10 +46,10 @@ export default function AlbumContent({
       className={
         (isListMode || isLyricsMode)
           ? 'flex size-72 w-full items-center justify-start gap-16 self-start md:mx-auto md:w-[400px]'
-          : 'flex min-h-0 w-full grow basis-0 items-start justify-center'
+          : 'flex w-full grow basis-0 items-start justify-center'
       }
     >
-      <motion.div className={(isListMode || isLyricsMode) ? 'aspect-square h-full' : 'size-full md:max-w-[400px]'}>
+      <motion.div className={(isListMode || isLyricsMode) ? 'aspect-square h-full' : 'size-full md:max-w-[400px] flex flex-col justify-center'}>
         <motion.div
           onClick={onAlbumartClick}
           animate={isPlaying || (isListMode || isLyricsMode) ? 'active' : 'shrink'}
