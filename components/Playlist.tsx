@@ -1,6 +1,5 @@
-import { getThumbnailUrl } from '@/lib/youtube';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useRef } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
 interface MusicStruct {
   artist: string;
@@ -19,12 +18,45 @@ interface Props {
 
 export default function Playlist({ musicsData, currentMusicIndex, onMusicClick }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [renderLimit, setRenderLimit] = useState<number>(30);
+
   const MusicsData = musicsData;
 
   const musics = [
     ...MusicsData.slice(currentMusicIndex + 1),
     ...MusicsData.slice(0, currentMusicIndex),
   ];
+
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const target = entries[0];
+      if (target.isIntersecting) {
+        setRenderLimit((prev) => Math.min(prev + 20, musics.length));
+      }
+    },
+    [musics.length]
+  );
+
+  useEffect(() => {
+    const option = {
+      root: scrollRef.current,
+      rootMargin: '200px',
+      threshold: 0,
+    };
+    observerRef.current = new IntersectionObserver(handleObserver, option);
+    if (loadMoreRef.current) observerRef.current.observe(loadMoreRef.current);
+
+    return () => {
+      if (observerRef.current) observerRef.current.disconnect();
+    };
+  }, [handleObserver]);
+
+  useEffect(() => {
+    // Reset limit on music change
+    setRenderLimit(30);
+  }, [currentMusicIndex]);
 
   function handleMusicClick(musicId: string) {
     const index = MusicsData.findIndex(music => music.id === musicId);
@@ -42,8 +74,11 @@ export default function Playlist({ musicsData, currentMusicIndex, onMusicClick }
       initial={{ opacity: 0, y: 300 }}
       className="scrollbar-hide mx-auto flex h-full max-h-full flex-col gap-12 self-stretch overflow-y-auto md:max-w-[400px]"
     >
+      {/* spacer to avoid mask top clipping */}
+      <div className="shrink-0 h-20 w-full" />
+
       <AnimatePresence>
-        {musics.map((music, index) => (
+        {musics.slice(0, renderLimit).map((music, index) => (
           <motion.div
             key={music.id}
             animate={{ opacity: 1 }}
@@ -66,6 +101,9 @@ export default function Playlist({ musicsData, currentMusicIndex, onMusicClick }
           </motion.div>
         ))}
       </AnimatePresence>
+      <div ref={loadMoreRef} className="h-10 shrink-0 w-full" />
+      {/* spacer to avoid mask bottom clipping */}
+      <div className="shrink-0 h-10 w-full" />
     </motion.div>
   );
 }

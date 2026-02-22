@@ -1,3 +1,4 @@
+'use client';
 import Icon from '@/components/Icon';
 import { motion } from 'framer-motion';
 import Lottie, { LottieRefCurrentProps } from 'lottie-react';

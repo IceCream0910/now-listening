@@ -14,6 +14,12 @@ export default function RootLayout({ children }: Props) {
   );
 }
 
+export const metadata = {
+  icons: {
+    icon: 'data:,',
+  },
+};
+
 export const viewport: Viewport = {
   height: 'device-height',
   initialScale: 1,

@@ -48,6 +48,7 @@ export default function AlbumContent({
           ? 'flex size-72 w-full items-center justify-start gap-16 self-start md:mx-auto md:w-[400px]'
           : 'flex w-full grow basis-0 items-start justify-center'
       }
+      style={{ marginTop: isListMode || isLyricsMode ? '20px' : '0px' }}
     >
       <motion.div className={(isListMode || isLyricsMode) ? 'aspect-square h-full' : 'size-full md:max-w-[400px] flex flex-col justify-center'}>
         <motion.div
@@ -59,6 +60,7 @@ export default function AlbumContent({
             shrink: { scale: 0.8, transition: { damping: 20, stiffness: 260, type: 'spring' } },
           }}
           layout
+          style={{ zIndex: 99 }}
           className="mx-auto aspect-square max-h-full max-w-full overflow-hidden rounded-8 data-[list=false]:rounded-16"
         >
           {children}
@@ -89,6 +91,7 @@ export default function AlbumContent({
             <Icon
               type="lyrics"
               className="size-16"
+              style={{ color: isLyricsMode ? currentMusic.color : '#ffffff' }}
             />
           </motion.div>
           <motion.div
@@ -109,6 +112,7 @@ export default function AlbumContent({
             <Icon
               type="list"
               className="size-16"
+              style={{ color: isListMode ? currentMusic.color : '#ffffff' }}
             />
           </motion.div>
         </div>

@@ -90,6 +90,8 @@ const parseTimeToSeconds = (time: string): number => {
   return seconds;
 };
 
+const lyricsCache: Record<string, { lyrics: LyricLine[], type: string }> = {};
+
 export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, currentTime, youtubeId }: Props) {
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [lyricsType, setLyricsType] = useState<string>('syllable');
@@ -98,6 +100,17 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    const musicId = musicsData[currentMusicIndex].id;
+
+    if (lyricsCache[musicId]) {
+      setLyrics(lyricsCache[musicId].lyrics);
+      setLyricsType(lyricsCache[musicId].type);
+      setActiveLyricIndex(0);
+      setIsEmptyTerm(false);
+      setIsLoading(false);
+      return;
+    }
+
     setLyrics([]);
     setLyricsType('syllable');
     setActiveLyricIndex(0);
@@ -106,21 +119,24 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
 
     const fetchLyrics = async () => {
       try {
-        const response = await fetch(`https://yuntae.in/api/music/lyrics/${musicsData[currentMusicIndex].id}`);
+        const response = await fetch(`https://yuntae.in/api/music/lyrics/${musicId}`);
         const data: any = await response.json();
         if (data.errors) {
           setLyricsType('none');
+          lyricsCache[musicId] = { lyrics: [], type: 'none' };
           setIsLoading(false);
           return;
         }
 
         const parsedLyrics = parseTTML(data.data[0].attributes.ttml);
+        let type = 'syllable';
         if (parsedLyrics[parsedLyrics.length - 1].end <= 0) { // syllable 가사 미지원 곡
-          setLyricsType('full');
-        } else {
-          setLyricsType('syllable');
+          type = 'full';
         }
+
+        setLyricsType(type);
         setLyrics(parsedLyrics);
+        lyricsCache[musicId] = { lyrics: parsedLyrics, type };
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching lyrics:', error);
@@ -156,18 +172,17 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
 
   if (lyricsType === 'full') {
     return (
-      <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
-
+      <div className="mx-auto flex size-full min-h-0 flex-col items-center justify-center p-4">
         <motion.div
           key={activeLyricIndex}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="text-center font-black w-full h-full overflow-y-auto"
-          style={{ fontSize: '1rem', fontWeight: 600, wordBreak: 'keep-all' }}
+          className="text-center font-black w-full flex-1 overflow-y-auto py-20 pr-4 styled-scrollbar"
+          style={{ fontSize: '1.2rem', fontWeight: 600, wordBreak: 'keep-all', lineHeight: '2' }}
         >
           {lyrics.map((lyric, index) => (
-            <motion.span key={index}>
+            <motion.span key={index} className="opacity-80 hover:opacity-100 transition-opacity">
               {lyric.text}<br />
             </motion.span>
           ))}
@@ -176,7 +191,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
     )
   } else if (lyricsType === 'syllable') {
     return (
-      <div className="mx-auto flex size-full flex-col items-center justify-center overflow-hidden p-4">
+      <div className="styled-scrollbar mx-auto flex size-full flex-col items-center justify-center overflow-y-auto overflow-x-hidden p-4">
         <AnimatePresence>
           {isLoading && (
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="100" height="100">
