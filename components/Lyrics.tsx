@@ -178,7 +178,7 @@ export default function Lyrics({ musicsData, currentMusicIndex, onLyricClick, cu
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="text-center font-black w-full flex-1 overflow-y-auto pt-0 pb-20 pr-4 styled-scrollbar"
+          className="text-center font-black w-full flex-1 overflow-y-auto pt-10 pb-20 pr-4 styled-scrollbar"
           style={{ fontSize: '1.2rem', fontWeight: 600, wordBreak: 'keep-all', lineHeight: '1.8' }}
         >
           {lyrics.map((lyric, index) => (

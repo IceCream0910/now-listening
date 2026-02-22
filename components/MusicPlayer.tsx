@@ -115,8 +115,8 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
   const currentMode = songId ? 'specific' : type;
 
   const scrollMaskStyle = {
-    maskImage: 'linear-gradient(to bottom, transparent, black 5%, black 95%, transparent)',
-    WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 5%, black 95%, transparent)'
+    maskImage: 'linear-gradient(to bottom, transparent, black 10%, black 80%, transparent)',
+    WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 10%, black 80%, transparent)'
   };
 
   useEffect(() => {
@@ -488,7 +488,7 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
         <ModeDropdown currentMode={currentMode} />
 
         {/* 모바일 레이아웃 */}
-        <div className="my-48 flex min-h-0 grow flex-col items-center justify-between gap-32 self-stretch md:max-h-[720px] md:hidden">
+        <div className="my-48 flex min-h-0 grow flex-col items-center justify-between self-stretch md:max-h-[720px] md:hidden">
           <AlbumContent
             currentMusic={currentMusic}
             colorScheme={colorScheme}

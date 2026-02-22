@@ -74,7 +74,7 @@ export default function Playlist({ musicsData, currentMusicIndex, onMusicClick }
       initial={{ opacity: 0, y: 300 }}
       className="scrollbar-hide mx-auto flex h-full max-h-full flex-col gap-12 self-stretch overflow-y-auto md:max-w-[400px]"
     >
-      <div className="shrink-0 w-full" />
+      <div className="shrink-0 h-20 w-full" />
 
       <AnimatePresence>
         {musics.slice(0, renderLimit).map((music, index) => (
