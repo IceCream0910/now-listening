@@ -14,6 +14,7 @@ interface MusicStruct {
 interface ColorScheme {
   background: string;
   secondary: string;
+  primary: string;
 }
 
 interface Props {
@@ -91,7 +92,7 @@ export default function AlbumContent({
             <Icon
               type="lyrics"
               className="size-16"
-              style={{ color: isLyricsMode ? currentMusic.color : '#ffffff' }}
+              style={{ color: isLyricsMode ? colorScheme.primary : '#ffffff' }}
             />
           </motion.div>
           <motion.div
@@ -112,7 +113,7 @@ export default function AlbumContent({
             <Icon
               type="list"
               className="size-16"
-              style={{ color: isListMode ? currentMusic.color : '#ffffff' }}
+              style={{ color: isListMode ? colorScheme.primary : '#ffffff' }}
             />
           </motion.div>
         </div>

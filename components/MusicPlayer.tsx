@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import YouTube, { YouTubeEvent, YouTubePlayer } from 'react-youtube';
-import { prominent, average } from 'color.js';
+
 import AlbumContent from '@/components/AlbumContent';
 import Icon from '@/components/Icon';
 import MusicController from '@/components/MusicController';
@@ -27,6 +27,7 @@ interface MusicStruct {
 interface ColorScheme {
   background: string;
   secondary: string;
+  primary: string;
 }
 
 const initialMusicIndex = 0;
@@ -102,7 +103,8 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
   const [error, setError] = useState<boolean>(false);
   const [colorScheme, setColorScheme] = useState<ColorScheme>({
     background: 'linear-gradient(rgb(95, 132, 169), rgb(15, 52, 89))',
-    secondary: '#FFFFFF50'
+    secondary: '#FFFFFF50',
+    primary: '#ffffff'
   });
 
   const router = useRouter();
@@ -165,8 +167,8 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
     async function getPlaylist() {
       try {
         const [res1, res2] = await Promise.all([
-          fetch(`https://yuntae.in/api/music/playlist/p.7PkeLRRi08JvEb2`, { cache: 'no-store' }),
-          fetch(`https://yuntae.in/api/music/playlist/p.EYWrgArHmbO0R2q`, { cache: 'no-store' })
+          fetch(`https://yuntae.in/api/music/playlist/p.7PkeLRRi08JvEb2`),
+          fetch(`https://yuntae.in/api/music/playlist/p.EYWrgArHmbO0R2q`)
         ]);
         const { data: data1 } = await res1.json();
         const { data: data2 } = await res2.json();
@@ -250,13 +252,15 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
         try {
           setColorScheme({
             background: `linear-gradient(to bottom, #${bgColor}, ${rgbToString(adjustBrightness(hexToRgb(bgColor), -150))})`,
-            secondary: `#${textColor}`
+            secondary: `#${textColor}`,
+            primary: `#${bgColor}`
           });
         } catch (error) {
           console.error('Error extracting colors:', error);
           setColorScheme({
             background: 'linear-gradient(to bottom, #000000, #000000)',
-            secondary: '#FFFFFF50'
+            secondary: '#FFFFFF50',
+            primary: '#000000'
           });
         }
       }
@@ -555,7 +559,7 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
                       border: isLyricsMode ? `1px solid rgba(255, 255, 255, 0.2)` : 'none',
                     }}
                   >
-                    <Icon type="lyrics" className="size-16" style={{ color: isLyricsMode ? currentMusic.color : '#ffffff' }} />
+                    <Icon type="lyrics" className="size-16" style={{ color: isLyricsMode ? colorScheme.primary : '#ffffff' }} />
                   </motion.div>
                   <div className="absolute -top-32 left-1/2 -translate-x-1/2 transform opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap bg-white/10 text-white text-xs px-8 py-1 rounded-full"
                     style={{ fontSize: '14px' }}>가사
@@ -575,7 +579,7 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
                       border: isListMode ? `1px solid rgba(255, 255, 255, 0.2)` : 'none',
                     }}
                   >
-                    <Icon type="list" className="size-16" style={{ color: isListMode ? currentMusic.color : '#ffffff' }} />
+                    <Icon type="list" className="size-16" style={{ color: isListMode ? colorScheme.primary : '#ffffff' }} />
                   </motion.div>
                   <div className="absolute -top-32 left-1/2 -translate-x-1/2 transform opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap bg-white/10 text-white text-xs px-6 py-1 rounded-full"
                     style={{ fontSize: '14px' }}>
@@ -647,7 +651,7 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
                       border: isLyricsMode ? `1px solid rgba(255, 255, 255, 0.2)` : 'none',
                     }}
                   >
-                    <Icon type="lyrics" className="size-16" style={{ color: isLyricsMode ? currentMusic.color : '#ffffff' }} />
+                    <Icon type="lyrics" className="size-16" style={{ color: isLyricsMode ? colorScheme.primary : '#ffffff' }} />
                   </motion.div>
                   <div className="absolute -top-32 left-1/2 -translate-x-1/2 transform opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap bg-white/10 text-white text-xs px-8 py-1 rounded-full"
                     style={{ fontSize: '14px' }}>가사
@@ -667,7 +671,7 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
                       border: isListMode ? `1px solid rgba(255, 255, 255, 0.2)` : 'none',
                     }}
                   >
-                    <Icon type="list" className="size-16" style={{ color: isListMode ? currentMusic.color : '#ffffff' }} />
+                    <Icon type="list" className="size-16" style={{ color: isListMode ? colorScheme.primary : '#ffffff' }} />
                   </motion.div>
                   <div className="absolute -top-32 left-1/2 -translate-x-1/2 transform opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap bg-white/10 text-white text-xs px-6 py-1 rounded-full"
                     style={{ fontSize: '14px' }}>
