@@ -11,6 +11,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.49.3",
     "@types/color-thief-node": "^1.0.4",
+    "@vercel/blob": "^2.3.3",
     "@vercel/edge-config": "^1.4.0",
     "color.js": "^1.2.0",
     "framer-motion": "^11.3.27",

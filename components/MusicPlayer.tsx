@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Lyrics from './Lyrics';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
+import { randomUUID } from 'crypto';
 
 interface MusicStruct {
   artist: string;
@@ -35,6 +36,20 @@ const initialMusicIndex = 0;
 const rgbToString = (rgb: number[]) => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 const hexToRgb = (hex: string) => hex.match(/[A-Za-z0-9]{2}/g)!.map(v => parseInt(v, 16));
 const adjustBrightness = (color: number[], amount: number) => color.map(c => Math.max(0, Math.min(255, c + amount)));
+
+const songDetailsCache: Record<string, Promise<any>> = {};
+
+function getSongDetailsMemoized(id: string) {
+  if (songDetailsCache[id]) return songDetailsCache[id];
+  songDetailsCache[id] = fetch(`https://yuntae.in/api/music/song/${id}`, { cache: 'no-store' })
+    .then(res => res.json())
+    .then(data => data.data?.[0]?.attributes)
+    .catch(e => {
+      console.error('Error fetching song details memoized:', e);
+      return null;
+    });
+  return songDetailsCache[id];
+}
 
 const PlaylistLoading = () => {
   const [msgIdx, setMsgIdx] = useState(0);
@@ -122,6 +137,17 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
   useEffect(() => {
     async function getRecent() {
       try {
+        let isFreshLoaded = false;
+        fetch(`/api/blob?key=recent`, { cache: 'no-store' })
+          .then(res => res.json())
+          .then(cache => {
+            if (cache?.data && cache.data.length > 0 && !isFreshLoaded) {
+              setMusicsData(cache.data);
+
+            }
+          })
+          .catch(e => console.error('Error loading recent cache:', e));
+
         const response = await fetch(`https://yuntae.in/api/music/recent`, { cache: 'no-store' });
         const result = await response.json();
         const transformedData: MusicStruct[] = result.data.map((item: any) => ({
@@ -135,7 +161,15 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
           textColor: item.attributes.artwork.textColor1,
           isrc: item.attributes.isrc
         }));
+
+        isFreshLoaded = true;
         setMusicsData(transformedData);
+
+        fetch(`/api/blob`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'recent', data: transformedData })
+        }).catch(e => console.error('Error saving recent to Blob:', e));
       } catch (error) {
         console.error('Error fetching music data:', error);
         setError(true);
@@ -166,6 +200,16 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
 
     async function getPlaylist() {
       try {
+        let isFreshLoaded = false;
+        fetch(`/api/blob?key=playlist`, { cache: 'no-store' })
+          .then(res => res.json())
+          .then(cache => {
+            if (cache?.data && cache.data.length > 0 && !isFreshLoaded) {
+              setMusicsData(cache.data);
+            }
+          })
+          .catch(e => console.error('Error loading playlist cache:', e));
+
         const [res1, res2] = await Promise.all([
           fetch(`https://yuntae.in/api/music/playlist/p.7PkeLRRi08JvEb2`),
           fetch(`https://yuntae.in/api/music/playlist/p.EYWrgArHmbO0R2q`)
@@ -187,14 +231,22 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
           artist: item.attributes.artistName,
           color: item.attributes.artwork?.bgColor ? '#' + item.attributes.artwork.bgColor : '#000000',
           duration: Math.floor(item.attributes.durationInMillis / 1000),
-          id: item.attributes.playParams.catalogId,
+          id: item.attributes.playParams?.catalogId || crypto.randomUUID(),
           title: item.attributes.name,
           albumart: item.attributes.artwork?.url ? item.attributes.artwork.url.replace('{w}', '1000').replace('{h}', '1000').replace('{f}', 'webp') : '',
           bgColor: item.attributes.artwork?.bgColor || '000000',
           textColor: item.attributes.artwork?.textColor1 || 'ffffff',
           isrc: item.attributes.isrc || ''
         }));
+
+        isFreshLoaded = true;
         setMusicsData(transformedData);
+
+        fetch(`/api/blob`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'playlist', data: transformedData })
+        }).catch(e => console.error('Error saving playlist to Blob:', e));
       } catch (error) {
         console.error('Error fetching music data:', error);
         setError(true);
@@ -236,16 +288,10 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
         let textColor = currentMusic.textColor;
 
         if (type === 'playlist') {
-          try {
-            const res = await fetch(`https://yuntae.in/api/music/song/${currentMusic.id}`, { cache: 'no-store' });
-            const data = await res.json();
-            const songAttributes = data.data?.[0]?.attributes;
-            if (songAttributes?.artwork) {
-              bgColor = songAttributes.artwork.bgColor || bgColor;
-              textColor = songAttributes.artwork.textColor1 || textColor;
-            }
-          } catch (e) {
-            console.error('Error fetching song specific color:', e);
+          const songAttributes = await getSongDetailsMemoized(currentMusic.id);
+          if (songAttributes?.artwork) {
+            bgColor = songAttributes.artwork.bgColor || bgColor;
+            textColor = songAttributes.artwork.textColor1 || textColor;
           }
         }
 
@@ -282,10 +328,19 @@ export default function MusicPlayer({ songId, type = 'recent' }: { songId?: stri
     if (!player) return;
 
     const fetchVideoId = async () => {
-      let response = await fetch(`/api/search?query=${currentMusic.isrc || `${currentMusic.title} ${currentMusic.artist} auto-generated`}`, { cache: "no-store" });
+      let isrc = currentMusic.isrc;
+
+      if (!isrc) {
+        const songAttributes = await getSongDetailsMemoized(currentMusic.id);
+        if (songAttributes?.isrc) {
+          isrc = songAttributes.isrc;
+        }
+      }
+
+      let response = await fetch(`/api/search?query=${isrc || `${currentMusic.title} ${currentMusic.artist} auto-generated`}`, { cache: "no-store" });
       let result = await response.json();
 
-      if (!result.data && currentMusic.isrc) {
+      if (!result.data && isrc) {
         response = await fetch(`/api/search?query=${currentMusic.title} ${currentMusic.artist} auto-generated`, { cache: "no-store" });
         result = await response.json();
       }
