@@ -1,4 +1,4 @@
-import MusicPlayer from '@/components/MusicPlayer';
+import MusicPlayer from '@/components/DynamicMusicPlayer';
 
 export default async function MainPage({ params }: { params: { id: string } | Promise<{ id: string }> }) {
     const resolvedParams = await params;

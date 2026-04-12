@@ -37,7 +37,7 @@ const rgbToString = (rgb: number[]) => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 const hexToRgb = (hex: string) => hex.match(/[A-Za-z0-9]{2}/g)!.map(v => parseInt(v, 16));
 const adjustBrightness = (color: number[], amount: number) => color.map(c => Math.max(0, Math.min(255, c + amount)));
 
-const songDetailsCache: Record<string, Promise<any>> = {};
+const songDetailsCache: Record<string, Promise<any> | undefined> = {};
 
 function getSongDetailsMemoized(id: string) {
   if (songDetailsCache[id]) return songDetailsCache[id];

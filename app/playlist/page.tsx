@@ -1,4 +1,4 @@
-import MusicPlayer from '@/components/MusicPlayer';
+import MusicPlayer from '@/components/DynamicMusicPlayer';
 import { Metadata } from 'next';
 
 export default function PlaylistPage() {
